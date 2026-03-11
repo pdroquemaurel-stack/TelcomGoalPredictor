@@ -1,104 +1,176 @@
-import { PrismaClient, AdSlotCode, CampaignType, ProductType, UserRole, FixtureState } from '@prisma/client';
+import { PrismaClient, UserRole, FixtureState } from '@prisma/client';
 import { hash } from 'bcryptjs';
 
 const prisma = new PrismaClient();
+
+function computePoints(predHome: number, predAway: number, realHome: number, realAway: number) {
+  if (predHome === realHome && predAway === realAway) return 3;
+  const pred = predHome === predAway ? 'D' : predHome > predAway ? 'H' : 'A';
+  const real = realHome === realAway ? 'D' : realHome > realAway ? 'H' : 'A';
+  return pred === real ? 1 : 0;
+}
 
 async function main() {
   const adminPass = await hash('Admin123!', 10);
   const playerPass = await hash('Player123!', 10);
 
-  const [sn, ng] = await Promise.all([
-    prisma.country.upsert({ where: { code: 'SN' }, update: {}, create: { code: 'SN', name: 'Senegal' } }),
-    prisma.country.upsert({ where: { code: 'NG' }, update: {}, create: { code: 'NG', name: 'Nigeria' } }),
-  ]);
+  const usersSeed = [
+    { email: 'admin@demo.com', role: UserRole.ADMIN, friendCode: 'ADMIN001', displayName: 'Demo Admin' },
+    { email: 'player@demo.com', role: UserRole.PLAYER, friendCode: 'PLAY001', displayName: 'Demo Player' },
+    { email: 'amina@demo.com', role: UserRole.PLAYER, friendCode: 'PLAY002', displayName: 'Amina' },
+    { email: 'koffi@demo.com', role: UserRole.PLAYER, friendCode: 'PLAY003', displayName: 'Koffi' },
+    { email: 'samir@demo.com', role: UserRole.PLAYER, friendCode: 'PLAY004', displayName: 'Samir' },
+  ];
 
-  const [dakar, lagos] = await Promise.all([
-    prisma.city.upsert({ where: { name_countryId: { name: 'Dakar', countryId: sn.id } }, update: {}, create: { name: 'Dakar', countryId: sn.id } }),
-    prisma.city.upsert({ where: { name_countryId: { name: 'Lagos', countryId: ng.id } }, update: {}, create: { name: 'Lagos', countryId: ng.id } }),
-  ]);
+  const users = [] as Array<{ id: string; email: string; displayName: string }>;
 
-  const admin = await prisma.user.upsert({
-    where: { email: 'admin@demo.com' },
-    update: { passwordHash: adminPass, role: UserRole.ADMIN },
-    create: { email: 'admin@demo.com', passwordHash: adminPass, role: UserRole.ADMIN, friendCode: 'ADMIN001' },
-  });
+  for (const seed of usersSeed) {
+    const user = await prisma.user.upsert({
+      where: { email: seed.email },
+      update: { passwordHash: seed.role === UserRole.ADMIN ? adminPass : playerPass, role: seed.role },
+      create: {
+        email: seed.email,
+        passwordHash: seed.role === UserRole.ADMIN ? adminPass : playerPass,
+        role: seed.role,
+        friendCode: seed.friendCode,
+      },
+    });
 
-  const player = await prisma.user.upsert({
-    where: { email: 'player@demo.com' },
-    update: { passwordHash: playerPass },
-    create: { email: 'player@demo.com', passwordHash: playerPass, friendCode: 'PLAY001' },
-  });
+    await prisma.profile.upsert({
+      where: { userId: user.id },
+      update: { displayName: seed.displayName, acceptedTerms: true },
+      create: { userId: user.id, displayName: seed.displayName, acceptedTerms: true, favoriteClub: 'World Cup Fan' },
+    });
 
-  await prisma.profile.upsert({
-    where: { userId: admin.id },
-    update: {},
-    create: { userId: admin.id, displayName: 'Demo Admin', acceptedTerms: true, countryId: sn.id, cityId: dakar.id, favoriteClub: 'ASC Jaraaf' },
-  });
-  await prisma.profile.upsert({
-    where: { userId: player.id },
-    update: {},
-    create: { userId: player.id, displayName: 'Demo Player', acceptedTerms: true, countryId: ng.id, cityId: lagos.id, favoriteClub: 'Enyimba FC' },
-  });
-
-  await prisma.adminUserRole.upsert({ where: { userId_role: { userId: admin.id, role: UserRole.ADMIN } }, update: {}, create: { userId: admin.id, role: UserRole.ADMIN } });
-
-  const comp = await prisma.competition.upsert({ where: { externalId: '2001' }, update: { name: 'CAF Champions League', code: 'CAFCL' }, create: { externalId: '2001', name: 'CAF Champions League', code: 'CAFCL' } });
-  const t1 = await prisma.team.upsert({ where: { externalId: '1001' }, update: {}, create: { externalId: '1001', name: 'Al Ahly' } });
-  const t2 = await prisma.team.upsert({ where: { externalId: '1002' }, update: {}, create: { externalId: '1002', name: 'Wydad AC' } });
-  const t3 = await prisma.team.upsert({ where: { externalId: '1003' }, update: {}, create: { externalId: '1003', name: 'Mamelodi Sundowns' } });
-
-  const kickoff1 = new Date(Date.now() + 24 * 3600 * 1000);
-  const kickoff2 = new Date(Date.now() - 48 * 3600 * 1000);
-
-  await prisma.fixture.upsert({
-    where: { externalId: '5001' },
-    update: {},
-    create: { externalId: '5001', competitionId: comp.id, homeTeamId: t1.id, awayTeamId: t2.id, utcKickoff: kickoff1, statusText: 'SCHEDULED', predictionEnabled: true, featured: true, fixtureState: FixtureState.PREDICTION_ENABLED },
-  });
-
-  await prisma.fixture.upsert({
-    where: { externalId: '5002' },
-    update: {},
-    create: { externalId: '5002', competitionId: comp.id, homeTeamId: t3.id, awayTeamId: t1.id, utcKickoff: kickoff2, statusText: 'FINISHED', homeScore: 2, awayScore: 1, fixtureState: FixtureState.COMPLETED },
-  });
-
-  const campaign = await prisma.sponsorCampaign.create({
-    data: {
-      type: CampaignType.BANNER,
-      name: 'Orange Goal Challenge',
-      sponsorBrand: 'Orange',
-      ctaText: 'Join challenge',
-      clickUrl: 'https://www.orange.com',
-      targetCountryId: sn.id,
-      targetCompetitionId: comp.id,
-      startDate: new Date(Date.now() - 86400000),
-      endDate: new Date(Date.now() + 15 * 86400000),
-      active: true,
-      priority: 10,
-    },
-  });
-
-  for (const [code, name] of [
-    [AdSlotCode.HOME_TOP_BANNER, 'Home top banner'],
-    [AdSlotCode.INLINE_PREDICTIONS, 'Inline predictions'],
-    [AdSlotCode.LEADERBOARD_SPONSOR, 'Leaderboard sponsor'],
-    [AdSlotCode.RESULT_PAGE_SPONSOR, 'Result page sponsor'],
-    [AdSlotCode.SHOP_SPONSOR, 'Shop sponsor'],
-  ] as const) {
-    await prisma.adSlot.upsert({ where: { code }, update: { campaignId: campaign.id }, create: { code, name, campaignId: campaign.id } });
+    users.push({ id: user.id, email: user.email, displayName: seed.displayName });
   }
 
-  await prisma.product.createMany({
-    data: [
-      { type: ProductType.DOUBLE_POINTS_TOKEN, name: 'Double Points Token', description: 'Double your points for one fixture.', price: 1.99, currency: 'USD', entitlementRules: 'one_fixture_boost' },
-      { type: ProductType.PREDICTION_SHIELD, name: 'Prediction Shield', description: 'Protect one wrong prediction streak.', price: 0.99, currency: 'USD', entitlementRules: 'one_streak_protect' },
-      { type: ProductType.PROFILE_COSMETIC, name: 'Premium Avatar Frame', description: 'Gold profile frame cosmetic.', price: 0.5, currency: 'USD', entitlementRules: 'cosmetic_frame' },
-      { type: ProductType.SPONSORED_BONUS, name: 'Sponsored Reward Pack', description: 'Operator sponsored free pack.', price: 0, currency: 'USD', sponsored: true, entitlementRules: 'sponsor_pack' },
-    ],
-    skipDuplicates: true,
-  });
+  const competitionsData = [
+    { externalId: 'wc2026', name: 'World Cup 2026', code: 'WC2026', displayOrder: 0 },
+    { externalId: 'cafcl', name: 'CAF Champions League', code: 'CAFCL', displayOrder: 1 },
+    { externalId: 'ucl', name: 'Champions League', code: 'UCL', displayOrder: 2 },
+  ];
 
-  await prisma.themeConfig.create({ data: { operatorName: 'Demo Telecom', logoUrl: 'https://placehold.co/200x60?text=Demo+Telecom' } });
+  const competitions = new Map<string, string>();
+  for (const comp of competitionsData) {
+    const competition = await prisma.competition.upsert({
+      where: { externalId: comp.externalId },
+      update: { name: comp.name, code: comp.code, active: true, visible: true, displayOrder: comp.displayOrder },
+      create: { externalId: comp.externalId, name: comp.name, code: comp.code, active: true, visible: true, displayOrder: comp.displayOrder },
+    });
+    competitions.set(comp.code, competition.id);
+  }
+
+  const teamNames = [
+    'Senegal', 'Nigeria', 'Morocco', 'Egypt', 'Brazil', 'France', 'Germany', 'Argentina',
+    'Al Ahly', 'Wydad AC', 'Mamelodi Sundowns', 'Esperance', 'Real Madrid', 'Barcelona', 'Manchester City', 'Bayern Munich',
+  ];
+
+  const teams = new Map<string, string>();
+  for (const name of teamNames) {
+    const key = `seed-team-${name.toLowerCase().replace(/\s+/g, '-')}`;
+    const team = await prisma.team.upsert({
+      where: { externalId: key },
+      update: { name },
+      create: { externalId: key, name },
+    });
+    teams.set(name, team.id);
+  }
+
+  const now = Date.now();
+  const fixtureSeeds = [
+    ['wc-1', 'WC2026', 'Senegal', 'Nigeria', now - 4 * 86400000, 2, 1],
+    ['wc-2', 'WC2026', 'Morocco', 'Egypt', now - 3 * 86400000, 1, 1],
+    ['wc-3', 'WC2026', 'Brazil', 'France', now - 2 * 86400000, 0, 2],
+    ['wc-4', 'WC2026', 'Germany', 'Argentina', now + 1 * 86400000, null, null],
+    ['wc-5', 'WC2026', 'Senegal', 'Brazil', now + 2 * 86400000, null, null],
+    ['wc-6', 'WC2026', 'France', 'Nigeria', now + 3 * 86400000, null, null],
+    ['caf-1', 'CAFCL', 'Al Ahly', 'Wydad AC', now - 2 * 86400000, 1, 0],
+    ['caf-2', 'CAFCL', 'Mamelodi Sundowns', 'Esperance', now + 1 * 86400000, null, null],
+    ['ucl-1', 'UCL', 'Real Madrid', 'Manchester City', now - 1 * 86400000, 2, 2],
+    ['ucl-2', 'UCL', 'Barcelona', 'Bayern Munich', now + 2 * 86400000, null, null],
+  ] as const;
+
+  const fixtures = [] as Array<{ id: string; externalId: string; realHome: number | null; realAway: number | null }>;
+
+  for (const [externalId, code, home, away, kickoffMs, homeScore, awayScore] of fixtureSeeds) {
+    const isCompleted = homeScore !== null && awayScore !== null;
+    const fixture = await prisma.fixture.upsert({
+      where: { externalId },
+      update: {
+        competitionId: competitions.get(code)!,
+        homeTeamId: teams.get(home)!,
+        awayTeamId: teams.get(away)!,
+        utcKickoff: new Date(kickoffMs),
+        statusText: isCompleted ? 'FINISHED' : 'SCHEDULED',
+        predictionEnabled: true,
+        fixtureState: isCompleted ? FixtureState.COMPLETED : FixtureState.PREDICTION_ENABLED,
+        homeScore,
+        awayScore,
+        visible: true,
+      },
+      create: {
+        externalId,
+        competitionId: competitions.get(code)!,
+        homeTeamId: teams.get(home)!,
+        awayTeamId: teams.get(away)!,
+        utcKickoff: new Date(kickoffMs),
+        statusText: isCompleted ? 'FINISHED' : 'SCHEDULED',
+        predictionEnabled: true,
+        fixtureState: isCompleted ? FixtureState.COMPLETED : FixtureState.PREDICTION_ENABLED,
+        homeScore,
+        awayScore,
+        visible: true,
+      },
+    });
+    fixtures.push({ id: fixture.id, externalId, realHome: homeScore, realAway: awayScore });
+  }
+
+  for (const user of users.filter((u) => u.email !== 'admin@demo.com')) {
+    for (const fixture of fixtures) {
+      const isPast = fixture.realHome !== null && fixture.realAway !== null;
+      const shouldPredict = Math.random() > 0.2 || isPast;
+      if (!shouldPredict) continue;
+
+      const homeScore = isPast ? Math.max(0, (fixture.realHome ?? 0) + (Math.floor(Math.random() * 3) - 1)) : Math.floor(Math.random() * 4);
+      const awayScore = isPast ? Math.max(0, (fixture.realAway ?? 0) + (Math.floor(Math.random() * 3) - 1)) : Math.floor(Math.random() * 4);
+
+      await prisma.prediction.upsert({
+        where: { userId_fixtureId: { userId: user.id, fixtureId: fixture.id } },
+        update: { homeScore, awayScore },
+        create: { userId: user.id, fixtureId: fixture.id, homeScore, awayScore },
+      });
+    }
+  }
+
+  for (const user of users) {
+    const predictions = await prisma.prediction.findMany({ where: { userId: user.id }, include: { fixture: true } });
+    const totalPredictions = predictions.length;
+    const exactHits = predictions.filter((prediction) => prediction.fixture.homeScore === prediction.homeScore && prediction.fixture.awayScore === prediction.awayScore).length;
+
+    const settled = predictions.filter((prediction) => prediction.fixture.homeScore !== null && prediction.fixture.awayScore !== null);
+    const totalPoints = settled.reduce((sum, prediction) => sum + computePoints(
+      prediction.homeScore,
+      prediction.awayScore,
+      prediction.fixture.homeScore ?? 0,
+      prediction.fixture.awayScore ?? 0,
+    ), 0);
+
+    const accuracyPct = totalPredictions === 0 ? 0 : Math.round((exactHits / totalPredictions) * 100);
+
+    await prisma.profile.update({
+      where: { userId: user.id },
+      data: {
+        totalPredictions,
+        exactHits,
+        totalPoints,
+        accuracyPct,
+        currentStreak: Math.min(totalPredictions, 4),
+        bestStreak: Math.min(totalPredictions + 1, 6),
+        level: totalPoints > 8 ? 'Pro' : 'Rookie',
+      },
+    });
+  }
 
   console.log('Seed complete. Admin: admin@demo.com / Admin123! | Player: player@demo.com / Player123!');
 }
