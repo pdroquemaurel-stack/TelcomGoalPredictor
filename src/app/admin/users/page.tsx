@@ -3,4 +3,27 @@ import { prisma } from '@/lib/prisma';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export default async function Page(){const users=await prisma.user.findMany({include:{profile:true},take:100});return <div><h1 className='text-2xl font-bold mb-3'>User Management</h1><div className='card'>{users.map(u=><p key={u.id}>{u.profile?.displayName || u.email} • {u.email} • {u.status}</p>)}</div></div>;}
+export default async function UsersPage() {
+  const users = await prisma.user.findMany({ include: { profile: true }, orderBy: { createdAt: 'asc' }, take: 100 });
+
+  return (
+    <div className="space-y-4 text-black">
+      <h1 className="text-2xl font-bold">Users</h1>
+      <div className="overflow-auto rounded-2xl bg-white p-4">
+        <table className="w-full text-sm">
+          <thead><tr className="text-left"><th>Username</th><th>Email</th><th>Points</th><th>Predictions</th></tr></thead>
+          <tbody>
+            {users.map((user) => (
+              <tr key={user.id} className="border-t">
+                <td className="py-2">{user.profile?.displayName ?? 'No profile'}</td>
+                <td>{user.email}</td>
+                <td>{user.profile?.totalPoints ?? 0}</td>
+                <td>{user.profile?.totalPredictions ?? 0}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
