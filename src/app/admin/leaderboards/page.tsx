@@ -1,0 +1,1 @@
+export default function Page(){return <div><h1 className='text-2xl font-bold mb-3'>Leaderboard Controls</h1><form action='/api/leaderboard/rebuild' method='post'><button className='rounded bg-brand px-3 py-2 text-white'>Rebuild Africa All-time</button></form></div>;}

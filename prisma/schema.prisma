@@ -1,0 +1,413 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum UserRole {
+  PLAYER
+  ADMIN
+  EDITOR
+}
+
+enum FixtureState {
+  IMPORTED
+  VISIBLE
+  PREDICTION_ENABLED
+  FEATURED
+  COMPLETED
+}
+
+enum FriendRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum LeaderboardScope {
+  FRIENDS
+  LOCAL
+  NATIONAL
+  AFRICA
+}
+
+enum LeaderboardPeriod {
+  WEEKLY
+  MONTHLY
+  ALL_TIME
+}
+
+enum CampaignType {
+  SPONSORSHIP
+  BRANDED_CHALLENGE
+  BANNER
+  SHOP_PROMO
+}
+
+enum AdSlotCode {
+  HOME_TOP_BANNER
+  INLINE_PREDICTIONS
+  LEADERBOARD_SPONSOR
+  RESULT_PAGE_SPONSOR
+  SHOP_SPONSOR
+}
+
+enum ProductType {
+  DOUBLE_POINTS_TOKEN
+  PREDICTION_SHIELD
+  PROFILE_COSMETIC
+  SPONSORED_BONUS
+}
+
+enum PurchaseStatus {
+  MOCKED_SUCCESS
+  PENDING
+  FAILED
+}
+
+model User {
+  id            String           @id @default(cuid())
+  email         String           @unique
+  passwordHash  String?
+  role          UserRole         @default(PLAYER)
+  status        UserStatus       @default(ACTIVE)
+  friendCode    String           @unique
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  profile       Profile?
+  predictions   Prediction[]
+  purchases     Purchase[]
+  badges        UserBadge[]
+  sentRequests  Friendship[]     @relation("FriendshipRequester")
+  recvRequests  Friendship[]     @relation("FriendshipAddressee")
+  adminRoles    AdminUserRole[]
+  auditLogs     AuditLog[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Country {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  name      String    @unique
+  cities    City[]
+  users     Profile[]
+  campaigns SponsorCampaign[]
+}
+
+model City {
+  id        String   @id @default(cuid())
+  name      String
+  countryId String
+  country   Country  @relation(fields: [countryId], references: [id], onDelete: Cascade)
+  users     Profile[]
+
+  @@unique([name, countryId])
+}
+
+model Profile {
+  id                     String   @id @default(cuid())
+  userId                 String   @unique
+  displayName            String
+  avatarUrl              String?
+  avatarColor            String?
+  favoriteClub           String?
+  language               String   @default("en")
+  notificationsEnabled   Boolean  @default(true)
+  discoverable           Boolean  @default(true)
+  acceptedTerms          Boolean  @default(false)
+  totalPredictions       Int      @default(0)
+  exactHits              Int      @default(0)
+  totalPoints            Int      @default(0)
+  accuracyPct            Float    @default(0)
+  currentStreak          Int      @default(0)
+  bestStreak             Int      @default(0)
+  bestLeaderboardRank    Int?
+  level                  String   @default("Rookie")
+  qrCodeData             String?
+  countryId              String?
+  cityId                 String?
+
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  country    Country?  @relation(fields: [countryId], references: [id])
+  city       City?     @relation(fields: [cityId], references: [id])
+
+  @@index([countryId])
+  @@index([cityId])
+}
+
+model Friendship {
+  id           String              @id @default(cuid())
+  requesterId  String
+  addresseeId  String
+  status       FriendRequestStatus @default(PENDING)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  requester    User @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee    User @relation("FriendshipAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, addresseeId])
+  @@index([status])
+}
+
+model Competition {
+  id            String   @id @default(cuid())
+  externalId    String   @unique
+  code          String?
+  name          String
+  country       String?
+  active        Boolean  @default(true)
+  visible       Boolean  @default(true)
+  displayOrder  Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  fixtures      Fixture[]
+  campaigns     SponsorCampaign[]
+
+  @@index([active, visible])
+}
+
+model Team {
+  id          String   @id @default(cuid())
+  externalId  String   @unique
+  name        String
+  shortName   String?
+  crestUrl    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  homeFixtures Fixture[] @relation("HomeTeam")
+  awayFixtures Fixture[] @relation("AwayTeam")
+}
+
+model Fixture {
+  id                   String      @id @default(cuid())
+  externalId           String      @unique
+  competitionId        String
+  homeTeamId           String
+  awayTeamId           String
+  utcKickoff           DateTime
+  statusText           String
+  fixtureState         FixtureState @default(IMPORTED)
+  homeScore            Int?
+  awayScore            Int?
+  predictionEnabled    Boolean     @default(false)
+  featured             Boolean     @default(false)
+  visible              Boolean     @default(true)
+  displayOrder         Int         @default(0)
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  homeTeam    Team        @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeam    Team        @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  predictions Prediction[]
+
+  @@index([utcKickoff])
+  @@index([predictionEnabled, visible])
+}
+
+model Prediction {
+  id            String   @id @default(cuid())
+  userId        String
+  fixtureId     String
+  homeScore     Int
+  awayScore     Int
+  pointsAwarded Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fixture       Fixture  @relation(fields: [fixtureId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, fixtureId])
+  @@index([fixtureId])
+}
+
+model LeaderboardSnapshot {
+  id         String           @id @default(cuid())
+  userId      String
+  scope       LeaderboardScope
+  period      LeaderboardPeriod
+  rank        Int
+  points      Int
+  streak      Int
+  createdAt   DateTime         @default(now())
+
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([scope, period, createdAt])
+}
+
+model SponsorCampaign {
+  id                 String       @id @default(cuid())
+  type               CampaignType
+  name               String
+  sponsorBrand       String
+  logoUrl            String?
+  bannerUrl          String?
+  ctaText            String?
+  clickUrl           String?
+  targetCompetitionId String?
+  targetCountryId    String?
+  startDate          DateTime
+  endDate            DateTime
+  priority           Int          @default(0)
+  active             Boolean      @default(true)
+  impressions        Int          @default(0)
+  clicks             Int          @default(0)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  targetCompetition  Competition? @relation(fields: [targetCompetitionId], references: [id])
+  targetCountry      Country?     @relation(fields: [targetCountryId], references: [id])
+  adSlots            AdSlot[]
+
+  @@index([active, startDate, endDate])
+}
+
+model AdSlot {
+  id          String      @id @default(cuid())
+  code        AdSlotCode  @unique
+  name        String
+  active      Boolean     @default(true)
+  campaignId  String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  campaign    SponsorCampaign? @relation(fields: [campaignId], references: [id])
+}
+
+model Product {
+  id                String      @id @default(cuid())
+  type              ProductType
+  name              String
+  description       String
+  price             Decimal     @default(0)
+  currency          String      @default("USD")
+  countryCode       String?
+  active            Boolean     @default(true)
+  sponsored         Boolean     @default(false)
+  entitlementRules  String
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  purchases         Purchase[]
+
+  @@index([active, sponsored])
+}
+
+model Purchase {
+  id          String        @id @default(cuid())
+  userId      String
+  productId   String
+  status      PurchaseStatus @default(MOCKED_SUCCESS)
+  createdAt   DateTime      @default(now())
+
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product     Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model Badge {
+  id          String      @id @default(cuid())
+  code        String      @unique
+  name        String
+  description String
+  users       UserBadge[]
+}
+
+model UserBadge {
+  id        String   @id @default(cuid())
+  userId    String
+  badgeId   String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge     Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId])
+}
+
+model ThemeConfig {
+  id                 String   @id @default(cuid())
+  operatorName       String
+  logoUrl            String?
+  primaryColor       String   @default("#008751")
+  secondaryColor     String   @default("#FCD116")
+  homeHeroText       String   @default("Predict. Compete. Celebrate African Football.")
+  sponsorLogoZoneUrl String?
+  updatedAt          DateTime @updatedAt
+  createdAt          DateTime @default(now())
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  actorUserId String?
+  action      String
+  targetType  String
+  targetId    String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  actor       User?    @relation(fields: [actorUserId], references: [id])
+
+  @@index([action, createdAt])
+}
+
+model AdminUserRole {
+  id        String   @id @default(cuid())
+  userId    String
+  role      UserRole
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, role])
+}
