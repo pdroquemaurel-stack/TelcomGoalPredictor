@@ -2,6 +2,10 @@ import { AdSlotView } from '@/components/ad-slot';
 import { PlayerNav } from '@/components/player-nav';
 import { prisma } from '@/lib/prisma';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+
 export default async function LeaderboardsPage() {
   const rows = await prisma.profile.findMany({ orderBy: { totalPoints: 'desc' }, take: 20 });
   return (
