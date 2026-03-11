@@ -19,4 +19,4 @@ services:
 
 databases:
   - name: pan-african-football-db
-    plan: starter
+    plan: free
