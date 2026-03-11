@@ -74,25 +74,26 @@ enum PurchaseStatus {
 }
 
 model User {
-  id            String           @id @default(cuid())
-  email         String           @unique
-  passwordHash  String?
-  role          UserRole         @default(PLAYER)
-  status        UserStatus       @default(ACTIVE)
-  friendCode    String           @unique
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  id           String     @id @default(cuid())
+  email        String     @unique
+  passwordHash String?
+  role         UserRole   @default(PLAYER)
+  status       UserStatus @default(ACTIVE)
+  friendCode   String     @unique
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 
-  accounts      Account[]
-  sessions      Session[]
-  profile       Profile?
-  predictions   Prediction[]
-  purchases     Purchase[]
-  badges        UserBadge[]
-  sentRequests  Friendship[]     @relation("FriendshipRequester")
-  recvRequests  Friendship[]     @relation("FriendshipAddressee")
-  adminRoles    AdminUserRole[]
-  auditLogs     AuditLog[]
+  accounts             Account[]
+  sessions             Session[]
+  leaderboardSnapshots LeaderboardSnapshot[]
+  profile              Profile?
+  predictions          Prediction[]
+  purchases            Purchase[]
+  badges               UserBadge[]
+  sentRequests         Friendship[]          @relation("FriendshipRequester")
+  recvRequests         Friendship[]          @relation("FriendshipAddressee")
+  adminRoles           AdminUserRole[]
+  auditLogs            AuditLog[]
 }
 
 model Account {
@@ -132,122 +133,122 @@ model VerificationToken {
 }
 
 model Country {
-  id        String    @id @default(cuid())
-  code      String    @unique
-  name      String    @unique
+  id        String            @id @default(cuid())
+  code      String            @unique
+  name      String            @unique
   cities    City[]
   users     Profile[]
   campaigns SponsorCampaign[]
 }
 
 model City {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   name      String
   countryId String
-  country   Country  @relation(fields: [countryId], references: [id], onDelete: Cascade)
+  country   Country   @relation(fields: [countryId], references: [id], onDelete: Cascade)
   users     Profile[]
 
   @@unique([name, countryId])
 }
 
 model Profile {
-  id                     String   @id @default(cuid())
-  userId                 String   @unique
-  displayName            String
-  avatarUrl              String?
-  avatarColor            String?
-  favoriteClub           String?
-  language               String   @default("en")
-  notificationsEnabled   Boolean  @default(true)
-  discoverable           Boolean  @default(true)
-  acceptedTerms          Boolean  @default(false)
-  totalPredictions       Int      @default(0)
-  exactHits              Int      @default(0)
-  totalPoints            Int      @default(0)
-  accuracyPct            Float    @default(0)
-  currentStreak          Int      @default(0)
-  bestStreak             Int      @default(0)
-  bestLeaderboardRank    Int?
-  level                  String   @default("Rookie")
-  qrCodeData             String?
-  countryId              String?
-  cityId                 String?
+  id                   String  @id @default(cuid())
+  userId               String  @unique
+  displayName          String
+  avatarUrl            String?
+  avatarColor          String?
+  favoriteClub         String?
+  language             String  @default("en")
+  notificationsEnabled Boolean @default(true)
+  discoverable         Boolean @default(true)
+  acceptedTerms        Boolean @default(false)
+  totalPredictions     Int     @default(0)
+  exactHits            Int     @default(0)
+  totalPoints          Int     @default(0)
+  accuracyPct          Float   @default(0)
+  currentStreak        Int     @default(0)
+  bestStreak           Int     @default(0)
+  bestLeaderboardRank  Int?
+  level                String  @default("Rookie")
+  qrCodeData           String?
+  countryId            String?
+  cityId               String?
 
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  country    Country?  @relation(fields: [countryId], references: [id])
-  city       City?     @relation(fields: [cityId], references: [id])
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  country Country? @relation(fields: [countryId], references: [id])
+  city    City?    @relation(fields: [cityId], references: [id])
 
   @@index([countryId])
   @@index([cityId])
 }
 
 model Friendship {
-  id           String              @id @default(cuid())
-  requesterId  String
-  addresseeId  String
-  status       FriendRequestStatus @default(PENDING)
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
+  id          String              @id @default(cuid())
+  requesterId String
+  addresseeId String
+  status      FriendRequestStatus @default(PENDING)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
 
-  requester    User @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
-  addressee    User @relation("FriendshipAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+  requester User @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee User @relation("FriendshipAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
 
   @@unique([requesterId, addresseeId])
   @@index([status])
 }
 
 model Competition {
-  id            String   @id @default(cuid())
-  externalId    String   @unique
-  code          String?
-  name          String
-  country       String?
-  active        Boolean  @default(true)
-  visible       Boolean  @default(true)
-  displayOrder  Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id           String   @id @default(cuid())
+  externalId   String   @unique
+  code         String?
+  name         String
+  country      String?
+  active       Boolean  @default(true)
+  visible      Boolean  @default(true)
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  fixtures      Fixture[]
-  campaigns     SponsorCampaign[]
+  fixtures  Fixture[]
+  campaigns SponsorCampaign[]
 
   @@index([active, visible])
 }
 
 model Team {
-  id          String   @id @default(cuid())
-  externalId  String   @unique
-  name        String
-  shortName   String?
-  crestUrl    String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(cuid())
+  externalId String   @unique
+  name       String
+  shortName  String?
+  crestUrl   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   homeFixtures Fixture[] @relation("HomeTeam")
   awayFixtures Fixture[] @relation("AwayTeam")
 }
 
 model Fixture {
-  id                   String      @id @default(cuid())
-  externalId           String      @unique
-  competitionId        String
-  homeTeamId           String
-  awayTeamId           String
-  utcKickoff           DateTime
-  statusText           String
-  fixtureState         FixtureState @default(IMPORTED)
-  homeScore            Int?
-  awayScore            Int?
-  predictionEnabled    Boolean     @default(false)
-  featured             Boolean     @default(false)
-  visible              Boolean     @default(true)
-  displayOrder         Int         @default(0)
-  createdAt            DateTime    @default(now())
-  updatedAt            DateTime    @updatedAt
+  id                String       @id @default(cuid())
+  externalId        String       @unique
+  competitionId     String
+  homeTeamId        String
+  awayTeamId        String
+  utcKickoff        DateTime
+  statusText        String
+  fixtureState      FixtureState @default(IMPORTED)
+  homeScore         Int?
+  awayScore         Int?
+  predictionEnabled Boolean      @default(false)
+  featured          Boolean      @default(false)
+  visible           Boolean      @default(true)
+  displayOrder      Int          @default(0)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
 
-  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
-  homeTeam    Team        @relation("HomeTeam", fields: [homeTeamId], references: [id])
-  awayTeam    Team        @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  competition Competition  @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  homeTeam    Team         @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeam    Team         @relation("AwayTeam", fields: [awayTeamId], references: [id])
   predictions Prediction[]
 
   @@index([utcKickoff])
@@ -264,95 +265,95 @@ model Prediction {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  fixture       Fixture  @relation(fields: [fixtureId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fixture Fixture @relation(fields: [fixtureId], references: [id], onDelete: Cascade)
 
   @@unique([userId, fixtureId])
   @@index([fixtureId])
 }
 
 model LeaderboardSnapshot {
-  id         String           @id @default(cuid())
-  userId      String
-  scope       LeaderboardScope
-  period      LeaderboardPeriod
-  rank        Int
-  points      Int
-  streak      Int
-  createdAt   DateTime         @default(now())
+  id        String            @id @default(cuid())
+  userId    String
+  scope     LeaderboardScope
+  period    LeaderboardPeriod
+  rank      Int
+  points    Int
+  streak    Int
+  createdAt DateTime          @default(now())
 
-  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([scope, period, createdAt])
 }
 
 model SponsorCampaign {
-  id                 String       @id @default(cuid())
-  type               CampaignType
-  name               String
-  sponsorBrand       String
-  logoUrl            String?
-  bannerUrl          String?
-  ctaText            String?
-  clickUrl           String?
+  id                  String       @id @default(cuid())
+  type                CampaignType
+  name                String
+  sponsorBrand        String
+  logoUrl             String?
+  bannerUrl           String?
+  ctaText             String?
+  clickUrl            String?
   targetCompetitionId String?
-  targetCountryId    String?
-  startDate          DateTime
-  endDate            DateTime
-  priority           Int          @default(0)
-  active             Boolean      @default(true)
-  impressions        Int          @default(0)
-  clicks             Int          @default(0)
-  createdAt          DateTime     @default(now())
-  updatedAt          DateTime     @updatedAt
+  targetCountryId     String?
+  startDate           DateTime
+  endDate             DateTime
+  priority            Int          @default(0)
+  active              Boolean      @default(true)
+  impressions         Int          @default(0)
+  clicks              Int          @default(0)
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
 
-  targetCompetition  Competition? @relation(fields: [targetCompetitionId], references: [id])
-  targetCountry      Country?     @relation(fields: [targetCountryId], references: [id])
-  adSlots            AdSlot[]
+  targetCompetition Competition? @relation(fields: [targetCompetitionId], references: [id])
+  targetCountry     Country?     @relation(fields: [targetCountryId], references: [id])
+  adSlots           AdSlot[]
 
   @@index([active, startDate, endDate])
 }
 
 model AdSlot {
-  id          String      @id @default(cuid())
-  code        AdSlotCode  @unique
-  name        String
-  active      Boolean     @default(true)
-  campaignId  String?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id         String     @id @default(cuid())
+  code       AdSlotCode @unique
+  name       String
+  active     Boolean    @default(true)
+  campaignId String?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
 
-  campaign    SponsorCampaign? @relation(fields: [campaignId], references: [id])
+  campaign SponsorCampaign? @relation(fields: [campaignId], references: [id])
 }
 
 model Product {
-  id                String      @id @default(cuid())
-  type              ProductType
-  name              String
-  description       String
-  price             Decimal     @default(0)
-  currency          String      @default("USD")
-  countryCode       String?
-  active            Boolean     @default(true)
-  sponsored         Boolean     @default(false)
-  entitlementRules  String
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
+  id               String      @id @default(cuid())
+  type             ProductType
+  name             String
+  description      String
+  price            Decimal     @default(0)
+  currency         String      @default("USD")
+  countryCode      String?
+  active           Boolean     @default(true)
+  sponsored        Boolean     @default(false)
+  entitlementRules String
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
 
-  purchases         Purchase[]
+  purchases Purchase[]
 
   @@index([active, sponsored])
 }
 
 model Purchase {
-  id          String        @id @default(cuid())
-  userId      String
-  productId   String
-  status      PurchaseStatus @default(MOCKED_SUCCESS)
-  createdAt   DateTime      @default(now())
+  id        String         @id @default(cuid())
+  userId    String
+  productId String
+  status    PurchaseStatus @default(MOCKED_SUCCESS)
+  createdAt DateTime       @default(now())
 
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  product     Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 model Badge {
@@ -369,8 +370,8 @@ model UserBadge {
   badgeId   String
   createdAt DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  badge     Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
 
   @@unique([userId, badgeId])
 }
@@ -396,7 +397,7 @@ model AuditLog {
   metadata    Json?
   createdAt   DateTime @default(now())
 
-  actor       User?    @relation(fields: [actorUserId], references: [id])
+  actor User? @relation(fields: [actorUserId], references: [id])
 
   @@index([action, createdAt])
 }
@@ -407,7 +408,7 @@ model AdminUserRole {
   role      UserRole
   createdAt DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, role])
 }
