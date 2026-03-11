@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { PlayerNav } from '@/components/player-nav';
+import { WorldCup2026Poc } from '@/components/world-cup-2026-poc';
 
 type Fixture = {
   id: string;
@@ -18,23 +19,20 @@ type Fixture = {
   resultStatus: 'won' | 'lost' | 'pending' | null;
 };
 
+type Tab = 'upcoming' | 'past';
+type Mode = 'classic' | 'worldcup';
+
 const schema = z.object({ fixtureId: z.string(), homeScore: z.coerce.number().min(0).max(20), awayScore: z.coerce.number().min(0).max(20) });
 type FormData = z.infer<typeof schema>;
 
 const quickScores: Array<[number, number]> = [[1, 0], [2, 1], [1, 1], [0, 0], [0, 1]];
 
-function chipStyle(state: Fixture['state']) {
-  if (state === 'open') return 'bg-emerald-400 text-black';
-  if (state === 'saved') return 'bg-brand text-black';
-  if (state === 'locked') return 'bg-zinc-500 text-white';
-  return 'bg-white text-black';
-}
-
-function resultChip(status: Fixture['resultStatus']) {
-  if (status === 'won') return <span className="game-chip bg-emerald-400 text-black">WON</span>;
-  if (status === 'lost') return <span className="game-chip bg-rose-500 text-white">LOST</span>;
-  if (status === 'pending') return <span className="game-chip bg-yellow-300 text-black">PENDING</span>;
-  return null;
+function getStatus(f: Fixture) {
+  if (f.state === 'resolved') return { label: 'resolved', tone: 'bg-white text-black' };
+  if (f.resultStatus === 'pending') return { label: 'pending result', tone: 'bg-yellow-300 text-black' };
+  if (f.state === 'locked') return { label: 'locked', tone: 'bg-zinc-500 text-white' };
+  if (f.state === 'saved') return { label: 'predicted', tone: 'bg-brand text-black' };
+  return { label: 'not predicted', tone: 'bg-rose-500 text-white' };
 }
 
 export default function PredictionsPage() {
@@ -42,6 +40,8 @@ export default function PredictionsPage() {
   const [savingFixtureId, setSavingFixtureId] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<Tab>('upcoming');
+  const [mode, setMode] = useState<Mode>('classic');
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -62,10 +62,21 @@ export default function PredictionsPage() {
     refreshFixtures();
   }, []);
 
-  const openFixtures = useMemo(() => fixtures.filter((f) => f.state === 'open' || f.state === 'saved'), [fixtures]);
-  const waitingFixtures = useMemo(() => fixtures.filter((f) => f.resultStatus === 'pending' && f.state !== 'resolved'), [fixtures]);
-  const resolvedFixtures = useMemo(() => fixtures.filter((f) => f.state === 'resolved'), [fixtures]);
-  const todoCount = useMemo(() => fixtures.filter((f) => f.state === 'open' && !f.savedPrediction).length, [fixtures]);
+  const upcomingFixtures = useMemo(() => {
+    const nowMs = Date.now();
+    return fixtures
+      .filter((f) => +new Date(f.kickoff) >= nowMs)
+      .sort((a, b) => +new Date(a.kickoff) - +new Date(b.kickoff));
+  }, [fixtures]);
+  const pastFixtures = useMemo(() => {
+    const nowMs = Date.now();
+    return fixtures
+      .filter((f) => +new Date(f.kickoff) < nowMs)
+      .sort((a, b) => +new Date(b.kickoff) - +new Date(a.kickoff));
+  }, [fixtures]);
+
+  const visibleFixtures = tab === 'upcoming' ? upcomingFixtures : pastFixtures;
+  const todoCount = useMemo(() => upcomingFixtures.filter((f) => !f.savedPrediction).length, [upcomingFixtures]);
 
   const onSubmit = async (data: FormData) => {
     setSavingFixtureId(data.fixtureId);
@@ -76,8 +87,10 @@ export default function PredictionsPage() {
     });
 
     if (res.ok) {
-      setMessage('✅ Prono sauvegardé ! Tu marques des points si le match tourne en ta faveur.');
-      setFixtures((current) => current.map((f) => f.id === data.fixtureId ? { ...f, state: 'saved', savedPrediction: { homeScore: data.homeScore, awayScore: data.awayScore }, resultStatus: 'pending' } : f));
+      setMessage('✅ Prono sauvegardé. Tu peux le modifier tant que le match n’a pas commencé.');
+      setFixtures((current) => current.map((f) => f.id === data.fixtureId
+        ? { ...f, state: 'saved', savedPrediction: { homeScore: data.homeScore, awayScore: data.awayScore }, resultStatus: 'pending' }
+        : f));
       reset({ fixtureId: '', homeScore: 1, awayScore: 0 });
       await refreshFixtures();
     } else {
@@ -90,38 +103,41 @@ export default function PredictionsPage() {
   const renderCard = (f: Fixture) => {
     const isSelected = selectedFixtureId === f.id;
     const canEdit = f.state === 'open' || f.state === 'saved';
+    const status = getStatus(f);
 
     return (
-      <article className="card space-y-4" key={f.id}>
+      <article className="rounded-3xl border-2 border-white/15 bg-gradient-to-br from-zinc-900 to-black p-5 shadow-xl" key={f.id}>
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-orange-300">{f.competition}</p>
-            <h3 className="mt-1 text-xl font-black leading-tight">{f.home} <span className="text-zinc-400">vs</span> {f.away}</h3>
-            <p className="mt-1 text-xs text-zinc-300">Kickoff: {new Date(f.kickoff).toLocaleString()}</p>
+            <h3 className="mt-1 text-2xl font-black leading-tight">{f.home} <span className="text-zinc-400">vs</span> {f.away}</h3>
+            <p className="mt-1 text-xs font-semibold text-zinc-300">{new Date(f.kickoff).toLocaleString()}</p>
           </div>
-          <span className={`game-chip ${chipStyle(f.state)}`}>{f.state.toUpperCase()}</span>
+          <span className={`game-chip ${status.tone}`}>{status.label.toUpperCase()}</span>
         </div>
 
         {f.savedPrediction && (
-          <div className="rounded-2xl border border-brand bg-brand/15 p-3 text-sm">
+          <div className="mt-4 rounded-2xl border border-brand bg-brand/15 p-3 text-sm">
             <p className="font-bold text-orange-200">Ton prono</p>
             <p className="text-lg font-black">{f.home} {f.savedPrediction.homeScore} - {f.savedPrediction.awayScore} {f.away}</p>
           </div>
         )}
 
         {f.finalScore && (
-          <div className="rounded-2xl border border-white/20 bg-black p-3 text-sm">
+          <div className="mt-3 rounded-2xl border border-white/20 bg-black p-3 text-sm">
             <p className="font-bold text-zinc-300">Score final</p>
             <p className="text-lg font-black">{f.home} {f.finalScore.homeScore} - {f.finalScore.awayScore} {f.away}</p>
           </div>
         )}
 
-        <div className="flex items-center gap-2">{resultChip(f.resultStatus)}</div>
+        {!f.savedPrediction && tab === 'upcoming' && (
+          <p className="mt-3 rounded-xl bg-rose-500/20 px-3 py-2 text-sm font-bold text-rose-200">⚠️ Aucun prono enregistré pour ce match.</p>
+        )}
 
         {canEdit && (
-          <div className="space-y-3">
+          <div className="mt-4 space-y-3">
             <button
-              className={`w-full rounded-2xl px-4 py-3 text-sm font-black ${isSelected ? 'bg-brand text-black' : 'bg-white text-black'}`}
+              className={`w-full rounded-2xl px-4 py-4 text-base font-black ${isSelected ? 'bg-brand text-black' : 'bg-white text-black'}`}
               type="button"
               onClick={() => {
                 setValue('fixtureId', f.id);
@@ -129,20 +145,20 @@ export default function PredictionsPage() {
                 setValue('awayScore', f.savedPrediction?.awayScore ?? 0);
               }}
             >
-              {f.savedPrediction ? 'Modifier mon prono' : 'Pronostiquer ce match'}
+              {f.savedPrediction ? 'Éditer mon prono' : 'Pronostiquer maintenant'}
             </button>
 
             {isSelected && (
               <>
                 <input type="hidden" value={f.id} {...register('fixtureId')} />
                 <div className="flex items-center justify-between gap-3">
-                  <input className="h-14 w-full rounded-2xl border-2 border-white/20 bg-black px-4 text-center text-2xl font-black" type="number" min={0} max={20} {...register('homeScore')} />
-                  <span className="text-2xl font-black text-orange-300">-</span>
-                  <input className="h-14 w-full rounded-2xl border-2 border-white/20 bg-black px-4 text-center text-2xl font-black" type="number" min={0} max={20} {...register('awayScore')} />
+                  <input className="h-16 w-full rounded-2xl border-2 border-white/20 bg-black px-4 text-center text-3xl font-black" type="number" min={0} max={20} {...register('homeScore')} />
+                  <span className="text-3xl font-black text-orange-300">-</span>
+                  <input className="h-16 w-full rounded-2xl border-2 border-white/20 bg-black px-4 text-center text-3xl font-black" type="number" min={0} max={20} {...register('awayScore')} />
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {quickScores.map(([h, a]) => (
-                    <button key={`${h}-${a}`} className="rounded-full border border-white/20 bg-zinc-900 px-3 py-1 text-xs font-bold" type="button" onClick={() => {
+                    <button key={`${h}-${a}`} className="rounded-full border border-white/20 bg-zinc-900 px-3 py-2 text-xs font-bold" type="button" onClick={() => {
                       setValue('homeScore', h);
                       setValue('awayScore', a);
                     }}>
@@ -150,8 +166,8 @@ export default function PredictionsPage() {
                     </button>
                   ))}
                 </div>
-                <button className="cta-primary w-full" disabled={savingFixtureId === f.id} type="submit">
-                  {savingFixtureId === f.id ? 'Sauvegarde...' : f.savedPrediction ? 'Mettre à jour le prono' : 'Sauvegarder le prono'}
+                <button className="cta-primary w-full py-4 text-base" disabled={savingFixtureId === f.id} type="submit">
+                  {savingFixtureId === f.id ? 'Sauvegarde...' : f.savedPrediction ? 'Mettre à jour' : 'Sauvegarder'}
                 </button>
               </>
             )}
@@ -163,52 +179,59 @@ export default function PredictionsPage() {
 
   return (
     <main className="mx-auto max-w-md space-y-4 px-4 pb-28 pt-5">
-      <header className="rounded-3xl bg-brand p-5 text-black shadow-xl shadow-orange-500/30">
+      <header className="rounded-3xl bg-brand p-5 text-black shadow-xl shadow-orange-500/40">
         <p className="text-xs font-black uppercase tracking-[0.18em]">Prono Arena</p>
-        <h1 className="mt-2 text-3xl font-black">Tes pronos du jour</h1>
-        <p className="mt-2 text-sm font-semibold">{todoCount > 0 ? `${todoCount} match(s) à pronostiquer maintenant.` : 'Tout est joué pour l’instant. Bien joué !'}</p>
+        <h1 className="mt-2 text-3xl font-black">Main player screen</h1>
+        <p className="mt-2 text-sm font-semibold">{todoCount > 0 ? `${todoCount} match(s) à pronostiquer.` : 'Tous les matchs à venir sont couverts.'}</p>
       </header>
 
-      <section className="grid grid-cols-3 gap-2 text-center text-xs">
-        <div className="card p-3"><p className="text-2xl font-black text-brand">{openFixtures.length}</p><p>OPEN/SAVED</p></div>
-        <div className="card p-3"><p className="text-2xl font-black text-yellow-300">{waitingFixtures.length}</p><p>PENDING</p></div>
-        <div className="card p-3"><p className="text-2xl font-black text-white">{resolvedFixtures.length}</p><p>RESOLVED</p></div>
+      <section className="grid grid-cols-2 gap-2 rounded-3xl bg-zinc-900 p-2">
+        {[['classic', 'Mode Classique'], ['worldcup', 'World Cup 2026']].map(([value, label]) => (
+          <button
+            className={`rounded-2xl px-3 py-3 text-sm font-black ${mode === value ? 'bg-brand text-black' : 'bg-black text-white border border-white/10'}`}
+            key={value}
+            onClick={() => setMode(value as Mode)}
+            type="button"
+          >
+            {label}
+          </button>
+        ))}
       </section>
 
-      {message && <p className="rounded-2xl border border-brand bg-brand/10 px-4 py-3 text-sm font-semibold text-orange-100">{message}</p>}
-      {errors.fixtureId && <p className="text-sm font-bold text-rose-300">Choisis d’abord un match avec le bouton principal.</p>}
-
-      <form className="space-y-5" onSubmit={handleSubmit(onSubmit)}>
-        {loading && <div className="card text-sm text-zinc-300">Chargement des matchs...</div>}
-
-        {!loading && openFixtures.length > 0 && (
-          <section className="space-y-3">
-            <h2 className="section-title">À jouer maintenant</h2>
-            {openFixtures.map(renderCard)}
+      {mode === 'worldcup' ? <WorldCup2026Poc /> : (
+        <>
+          <section className="grid grid-cols-2 gap-2 rounded-3xl bg-zinc-900 p-2">
+            {[['upcoming', 'Matchs à venir'], ['past', 'Matchs passés']].map(([value, label]) => (
+              <button
+                className={`rounded-2xl px-3 py-3 text-sm font-black ${tab === value ? 'bg-brand text-black' : 'bg-black text-white border border-white/10'}`}
+                key={value}
+                onClick={() => setTab(value as Tab)}
+                type="button"
+              >
+                {label}
+              </button>
+            ))}
           </section>
-        )}
 
-        {!loading && waitingFixtures.length > 0 && (
-          <section className="space-y-3">
-            <h2 className="section-title">En attente de résultat</h2>
-            {waitingFixtures.map(renderCard)}
-          </section>
-        )}
+          {message && <p className="rounded-2xl border border-brand bg-brand/10 px-4 py-3 text-sm font-semibold text-orange-100">{message}</p>}
+          {errors.fixtureId && <p className="text-sm font-bold text-rose-300">Choisis d’abord un match avec le bouton principal.</p>}
 
-        {!loading && resolvedFixtures.length > 0 && (
-          <section className="space-y-3">
-            <h2 className="section-title">Résultats terminés</h2>
-            {resolvedFixtures.map(renderCard)}
-          </section>
-        )}
+          <form className="space-y-5" onSubmit={handleSubmit(onSubmit)}>
+            {loading && <div className="card text-sm text-zinc-300">Chargement des matchs...</div>}
 
-        {!loading && fixtures.length === 0 && (
-          <div className="card text-center">
-            <p className="text-lg font-black">Aucun match disponible</p>
-            <p className="mt-2 text-sm text-zinc-300">Reviens après la prochaine synchronisation des fixtures.</p>
-          </div>
-        )}
-      </form>
+            {!loading && visibleFixtures.length > 0 && (
+              <section className="space-y-3">{visibleFixtures.map(renderCard)}</section>
+            )}
+
+            {!loading && visibleFixtures.length === 0 && (
+              <div className="card text-center">
+                <p className="text-lg font-black">Aucun match {tab === 'upcoming' ? 'à venir' : 'passé'} disponible</p>
+              </div>
+            )}
+          </form>
+        </>
+      )}
+
       <PlayerNav />
     </main>
   );
