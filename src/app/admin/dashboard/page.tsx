@@ -3,7 +3,6 @@ import { prisma } from '@/lib/prisma';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-
 export default async function AdminDashboardPage() {
   const [users, predictions, fixtures, adSlots, campaigns] = await Promise.all([
     prisma.user.count(),
@@ -12,16 +11,19 @@ export default async function AdminDashboardPage() {
     prisma.adSlot.count(),
     prisma.sponsorCampaign.count(),
   ]);
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <h1 className="text-2xl font-bold">Dashboard</h1>
-      <div className="grid grid-cols-3 gap-3">
-        <div className="card">Total users: {users}</div>
-        <div className="card">Predictions submitted: {predictions}</div>
-        <div className="card">Active fixtures: {fixtures}</div>
-        <div className="card">Ad slots: {adSlots}</div>
-        <div className="card">Sponsor campaigns: {campaigns}</div>
-        <div className="card">Recent activity placeholder</div>
+      <p className="text-sm text-slate-600">Operational overview for fixtures, engagement, and sponsor inventory.</p>
+
+      <div className="grid gap-3 md:grid-cols-3">
+        <div className="card"><p className="text-xs uppercase text-slate-500">Users</p><p className="mt-1 text-2xl font-bold">{users}</p></div>
+        <div className="card"><p className="text-xs uppercase text-slate-500">Predictions</p><p className="mt-1 text-2xl font-bold">{predictions}</p></div>
+        <div className="card"><p className="text-xs uppercase text-slate-500">Active Fixtures</p><p className="mt-1 text-2xl font-bold">{fixtures}</p></div>
+        <div className="card"><p className="text-xs uppercase text-slate-500">Ad Slots</p><p className="mt-1 text-2xl font-bold">{adSlots}</p></div>
+        <div className="card"><p className="text-xs uppercase text-slate-500">Campaigns</p><p className="mt-1 text-2xl font-bold">{campaigns}</p></div>
+        <div className="card bg-slate-50"><p className="text-xs uppercase text-slate-500">Activity</p><p className="mt-1 text-sm">Fixture sync, campaign rotation, and leaderboard recalculation are available from sidebar tools.</p></div>
       </div>
     </div>
   );

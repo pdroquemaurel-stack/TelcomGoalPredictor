@@ -11,11 +11,11 @@ export async function AdSlotView({ code }: { code: AdSlotCode }) {
   if (!slot?.active || !active || !campaign) return null;
 
   return (
-    <div className="card bg-yellow-50">
-      <p className="text-xs uppercase text-slate-500">Sponsored</p>
-      <p className="font-semibold">{campaign.name}</p>
+    <div className="card border-amber-200 bg-gradient-to-r from-amber-50 to-yellow-50">
+      <p className="text-xs uppercase tracking-wide text-amber-700">Sponsored challenge</p>
+      <p className="mt-1 font-semibold text-amber-950">{campaign.name}</p>
       {campaign.ctaText && campaign.clickUrl && (
-        <Link href={`/api/ad/click?campaignId=${campaign.id}`} className="text-sm text-brand underline">
+        <Link href={`/api/ad/click?campaignId=${campaign.id}`} className="mt-2 inline-block text-sm font-semibold text-amber-900 underline">
           {campaign.ctaText}
         </Link>
       )}
