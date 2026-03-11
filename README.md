@@ -207,12 +207,12 @@ To swap provider:
 
 ## 12) UX improvements in this version
 
-- Redesigned homepage with a stronger hero, product-grade CTAs, upcoming match cards, sponsor challenge integration, leaderboard preview, league preview, and progression teaser.
-- Reworked predictions into a card-based mobile flow with clear fixture context, open/saved/locked states, quick-pick scores, and stronger success/error/empty/loading feedback.
-- Improved prediction persistence visibility: saved scores are now shown immediately after save and remain visible after page reload.
-- Upgraded leaderboard presentation with rank emphasis, highlighted top player card, and clearer points/streak trend cues.
-- Enhanced league/friends and challenge center pages to feel more competitive and sponsor-driven while keeping the current MVP architecture.
-- Cleaned admin dashboard visual hierarchy with clearer operational stat cards.
+- New bold **mobile game visual identity** centered on Orange `#FF7900`, Black, and White for stronger contrast and demo impact.
+- Player experience simplified into a **3-tab navigation** only: **Prono / Leaderboard / Profil**.
+- **Prono** is now the main gameplay hub with larger match cards, strong status chips (`OPEN`, `SAVED`, `LOCKED`, `PENDING`, `WON`, `LOST`), obvious save/update CTAs, and persistent saved prediction visibility.
+- **Leaderboard** now unifies global ranking + leagues + sponsor challenges in one competition-focused screen.
+- **Profil** now unifies account summary, prediction statistics, streak/badge placeholders, and settings actions in one branded view.
+- UI elements were made larger and more tappable (buttons, cards, chips) to improve repeated mobile use.
 
 ---
 

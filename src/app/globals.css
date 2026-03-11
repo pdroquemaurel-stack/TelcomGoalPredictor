@@ -3,14 +3,26 @@
 @tailwind utilities;
 
 :root {
-  --brand-primary: #008751;
-  --brand-secondary: #fcd116;
+  --brand-primary: #ff7900;
+  --brand-secondary: #000000;
 }
 
 body {
-  @apply bg-slate-50 text-slate-900;
+  @apply bg-black text-white;
 }
 
 .card {
-  @apply rounded-2xl border border-slate-200 bg-white p-4 shadow-sm;
+  @apply rounded-3xl border border-white/10 bg-zinc-950 p-4 shadow-lg shadow-black/40;
+}
+
+.section-title {
+  @apply text-xl font-extrabold tracking-tight;
+}
+
+.game-chip {
+  @apply inline-flex items-center rounded-full px-3 py-1 text-xs font-black tracking-wide;
+}
+
+.cta-primary {
+  @apply rounded-2xl bg-brand px-5 py-3 text-sm font-black text-black shadow-lg shadow-orange-500/40;
 }
