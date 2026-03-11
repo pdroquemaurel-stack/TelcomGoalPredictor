@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 import { NextResponse } from 'next/server';

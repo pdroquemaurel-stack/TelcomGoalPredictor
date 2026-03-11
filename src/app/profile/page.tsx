@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { PlayerNav } from '@/components/player-nav';
 import { prisma } from '@/lib/prisma';
 

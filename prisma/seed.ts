@@ -62,7 +62,8 @@ async function main() {
     create: { externalId: '5002', competitionId: comp.id, homeTeamId: t3.id, awayTeamId: t1.id, utcKickoff: kickoff2, statusText: 'FINISHED', homeScore: 2, awayScore: 1, fixtureState: FixtureState.COMPLETED },
   });
 
-  const campaign = await prisma.sponsorCampaign.create({
+  const existingCampaign = await prisma.sponsorCampaign.findFirst({ where: { name: 'Orange Goal Challenge' } });
+  const campaign = existingCampaign ?? await prisma.sponsorCampaign.create({
     data: {
       type: CampaignType.BANNER,
       name: 'Orange Goal Challenge',
@@ -98,7 +99,10 @@ async function main() {
     skipDuplicates: true,
   });
 
-  await prisma.themeConfig.create({ data: { operatorName: 'Demo Telecom', logoUrl: 'https://placehold.co/200x60?text=Demo+Telecom' } });
+  const themeConfigCount = await prisma.themeConfig.count();
+  if (themeConfigCount === 0) {
+    await prisma.themeConfig.create({ data: { operatorName: 'Demo Telecom', logoUrl: 'https://placehold.co/200x60?text=Demo+Telecom' } });
+  }
 
   console.log('Seed complete. Admin: admin@demo.com / Admin123! | Player: player@demo.com / Player123!');
 }

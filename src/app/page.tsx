@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import Link from 'next/link';
 import { AdSlotView } from '@/components/ad-slot';
 import { PlayerNav } from '@/components/player-nav';
