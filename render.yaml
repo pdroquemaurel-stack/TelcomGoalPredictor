@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: pan-african-football-predictor
+    env: node
+    plan: starter
+    buildCommand: npm install && npm run prisma:generate && npm run build
+    startCommand: npm run prisma:deploy && npm run start
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: pan-african-football-db
+          property: connectionString
+      - key: NEXTAUTH_URL
+        value: https://pan-african-football-predictor.onrender.com
+      - key: NEXTAUTH_SECRET
+        generateValue: true
+      - key: FOOTBALL_DATA_API_KEY
+        sync: false
+
+databases:
+  - name: pan-african-football-db
+    plan: starter
