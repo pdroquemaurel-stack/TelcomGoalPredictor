@@ -2,6 +2,10 @@ import { AdSlotView } from '@/components/ad-slot';
 import { PlayerNav } from '@/components/player-nav';
 import { prisma } from '@/lib/prisma';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+
 export default async function ShopPage() {
   const products = await prisma.product.findMany({ where: { active: true } });
   return (

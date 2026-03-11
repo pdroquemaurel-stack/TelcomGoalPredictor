@@ -3,6 +3,9 @@ import { AdSlotView } from '@/components/ad-slot';
 import { PlayerNav } from '@/components/player-nav';
 import { prisma } from '@/lib/prisma';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function HomePage() {
   const fixtures = await prisma.fixture.findMany({ where: { visible: true }, include: { homeTeam: true, awayTeam: true, competition: true }, orderBy: [{ featured: 'desc' }, { utcKickoff: 'asc' }], take: 6 });
   const top = await prisma.profile.findMany({ orderBy: { totalPoints: 'desc' }, take: 5 });

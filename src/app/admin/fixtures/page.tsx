@@ -1,5 +1,9 @@
 import { prisma } from '@/lib/prisma';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+
 export default async function AdminFixturesPage() {
   const fixtures = await prisma.fixture.findMany({ include: { competition: true, homeTeam: true, awayTeam: true }, orderBy: { utcKickoff: 'asc' }, take: 50 });
   return (

@@ -1,6 +1,10 @@
 import { PlayerNav } from '@/components/player-nav';
 import { prisma } from '@/lib/prisma';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+
 export default async function ProfilePage() {
   const profile = await prisma.profile.findFirst({ include: { user: true, city: true, country: true } });
 
