@@ -205,6 +205,17 @@ To swap provider:
 
 ---
 
+## 12) UX improvements in this version
+
+- Redesigned homepage with a stronger hero, product-grade CTAs, upcoming match cards, sponsor challenge integration, leaderboard preview, league preview, and progression teaser.
+- Reworked predictions into a card-based mobile flow with clear fixture context, open/saved/locked states, quick-pick scores, and stronger success/error/empty/loading feedback.
+- Improved prediction persistence visibility: saved scores are now shown immediately after save and remain visible after page reload.
+- Upgraded leaderboard presentation with rank emphasis, highlighted top player card, and clearer points/streak trend cues.
+- Enhanced league/friends and challenge center pages to feel more competitive and sponsor-driven while keeping the current MVP architecture.
+- Cleaned admin dashboard visual hierarchy with clearer operational stat cards.
+
+---
+
 ## Useful commands summary
 ```bash
 npm run dev
