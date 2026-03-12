@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const links = [
-  ['/daily', 'Quotidien'],
+  ['/daily', 'Prono du jour'],
   ['/challenges', 'Challenges'],
   ['/leaderboards', 'Classement'],
   ['/profile', 'Profil'],

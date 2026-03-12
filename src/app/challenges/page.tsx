@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 export default async function ChallengesPage() {
   const challenges = await prisma.challenge.findMany({
     where: getActiveChallengesFilter(),
-    include: { competition: true, _count: { select: { fixtures: true } } },
+    include: { competitions: { include: { competition: true } }, _count: { select: { fixtures: true } } },
     orderBy: [{ startDate: 'asc' }],
   });
 
@@ -20,7 +20,7 @@ export default async function ChallengesPage() {
       </header>
       {challenges.map((challenge) => (
         <article key={challenge.id} className="card">
-          <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-300">{challenge.competition.name}</p>
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-300">{challenge.competitions.map((item) => item.competition.name).join(' • ') || 'Multi-compétitions'}</p>
           <h2 className="text-xl font-black">{challenge.name}</h2>
           {challenge.description && <p className="mt-1 text-sm text-zinc-200">{challenge.description}</p>}
           <p className="mt-1 text-xs text-zinc-300">{new Date(challenge.startDate).toLocaleDateString()} → {new Date(challenge.endDate).toLocaleDateString()} • {challenge._count.fixtures} matchs</p>

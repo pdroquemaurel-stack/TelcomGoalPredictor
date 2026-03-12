@@ -215,9 +215,9 @@ model Competition {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  fixtures   Fixture[]
-  campaigns  SponsorCampaign[]
-  challenges Challenge[]
+  fixtures              Fixture[]
+  campaigns             SponsorCampaign[]
+  challengeCompetitions ChallengeCompetition[]
 
   @@index([active, visible])
 }
@@ -265,22 +265,33 @@ model Fixture {
 }
 
 model Challenge {
-  id            String   @id @default(cuid())
-  name          String
-  slug          String   @unique
-  description   String?
-  competitionId String
-  startDate     DateTime
-  endDate       DateTime
-  reward        String?
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  startDate   DateTime
+  endDate     DateTime
+  reward      String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  competition Competition      @relation(fields: [competitionId], references: [id], onDelete: Cascade)
-  fixtures    ChallengeFixture[]
+  fixtures      ChallengeFixture[]
+  competitions  ChallengeCompetition[]
 
   @@index([isActive, startDate, endDate])
+}
+
+model ChallengeCompetition {
+  id            String   @id @default(cuid())
+  challengeId   String
+  competitionId String
+  createdAt     DateTime @default(now())
+
+  challenge   Challenge   @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+
+  @@unique([challengeId, competitionId])
   @@index([competitionId])
 }
 
