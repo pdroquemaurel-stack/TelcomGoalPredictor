@@ -10,7 +10,7 @@ const schema = z.object({
   name: z.string().min(2),
   slug: z.string().min(2).optional(),
   description: z.string().optional().nullable(),
-  competitionId: z.string().min(1),
+  competitionIds: z.array(z.string().min(1)).min(1),
   startDate: z.string(),
   endDate: z.string(),
   reward: z.string().optional().nullable(),
@@ -39,7 +39,6 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       name: data.name,
       slug: data.slug ? slugify(data.slug) : slugify(data.name),
       description: data.description || null,
-      competitionId: data.competitionId,
       startDate: new Date(data.startDate),
       endDate: new Date(data.endDate),
       reward: data.reward || null,
@@ -47,6 +46,11 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     },
   });
 
+  await prisma.challengeCompetition.deleteMany({ where: { challengeId: challenge.id } });
+  await prisma.challengeCompetition.createMany({
+    data: data.competitionIds.map((competitionId) => ({ challengeId: challenge.id, competitionId })),
+    skipDuplicates: true,
+  });
   await prisma.challengeFixture.deleteMany({ where: { challengeId: challenge.id } });
   await ensureChallengeFixtureLinks(challenge.id);
   return apiSuccess(challenge);

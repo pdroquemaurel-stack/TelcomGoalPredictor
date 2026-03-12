@@ -1,10 +1,10 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { getChallengeDetailBySlug, getChallengeLeaderboard } from '@/lib/services/challenge-service';
 import { PlayerNav } from '@/components/player-nav';
+import { FixturePredictionCard } from '@/components/fixture-prediction-card';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,7 +24,7 @@ export default async function ChallengeDetailPage({ params }: { params: { slug: 
       <header className="rounded-3xl bg-brand p-5 text-black">
         <p className="text-xs font-black uppercase tracking-[0.18em]">Challenge</p>
         <h1 className="mt-1 text-2xl font-black">{challenge.name}</h1>
-        <p className="mt-1 text-sm font-semibold">{challenge.competition.name} • {new Date(challenge.startDate).toLocaleDateString()} → {new Date(challenge.endDate).toLocaleDateString()}</p>
+        <p className="mt-1 text-sm font-semibold">{challenge.competitions.join(' • ')} • {new Date(challenge.startDate).toLocaleDateString()} → {new Date(challenge.endDate).toLocaleDateString()}</p>
         {challenge.reward && <p className="mt-1 text-sm font-bold">🏆 {challenge.reward}</p>}
       </header>
 
@@ -34,12 +34,18 @@ export default async function ChallengeDetailPage({ params }: { params: { slug: 
         <h2 className="section-title">Matchs du challenge</h2>
         <div className="mt-2 space-y-2">
           {challenge.fixtures.map((fixture) => (
-            <article key={fixture.id} className="rounded-2xl border border-white/15 bg-black p-3">
-              <p className="text-xs text-zinc-400">{new Date(fixture.kickoff).toLocaleString()}</p>
-              <p className="font-bold">{fixture.home} vs {fixture.away}</p>
-              <p className="text-xs font-semibold text-brand">{fixture.savedPrediction ? `Prono: ${fixture.savedPrediction.homeScore}-${fixture.savedPrediction.awayScore}` : 'Pas encore pronostiqué'}</p>
-              <Link href={`/predictions?competitionId=${challenge.competition.id}`} className="mt-2 inline-block text-xs font-black uppercase text-brand">Pronostiquer</Link>
-            </article>
+            <FixturePredictionCard
+              key={fixture.id}
+              away={fixture.away}
+              awayLogoUrl={fixture.awayLogoUrl}
+              competition={fixture.competition}
+              editable={fixture.canPredict}
+              fixtureId={fixture.id}
+              home={fixture.home}
+              homeLogoUrl={fixture.homeLogoUrl}
+              kickoff={fixture.kickoff}
+              savedPrediction={fixture.savedPrediction}
+            />
           ))}
         </div>
       </section>

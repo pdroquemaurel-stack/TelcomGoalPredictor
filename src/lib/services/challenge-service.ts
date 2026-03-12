@@ -11,12 +11,18 @@ export function getActiveChallengesFilter(now = new Date()) {
 }
 
 export async function ensureChallengeFixtureLinks(challengeId: string) {
-  const challenge = await prisma.challenge.findUnique({ where: { id: challengeId } });
+  const challenge = await prisma.challenge.findUnique({
+    where: { id: challengeId },
+    include: { competitions: true },
+  });
   if (!challenge) return;
+
+  const competitionIds = challenge.competitions.map((item) => item.competitionId);
+  if (!competitionIds.length) return;
 
   const fixtures = await prisma.fixture.findMany({
     where: {
-      competitionId: challenge.competitionId,
+      competitionId: { in: competitionIds },
       utcKickoff: { gte: challenge.startDate, lte: challenge.endDate },
     },
     select: { id: true },
@@ -44,13 +50,14 @@ export async function getChallengeDetailBySlug(slug: string, userId: string) {
   const challenge = await prisma.challenge.findUnique({
     where: { slug },
     include: {
-      competition: true,
+      competitions: { include: { competition: true } },
       fixtures: {
         include: {
           fixture: {
             include: {
               homeTeam: true,
               awayTeam: true,
+              competition: true,
               predictions: { where: { userId }, take: 1 },
             },
           },
@@ -67,6 +74,7 @@ export async function getChallengeDetailBySlug(slug: string, userId: string) {
     .map((fixture) => ({
       id: fixture.id,
       kickoff: fixture.utcKickoff,
+      competition: fixture.competition.name,
       home: fixture.homeTeam.name,
       away: fixture.awayTeam.name,
       homeLogoUrl: getTeamLogoUrl(fixture.homeTeam),
@@ -89,10 +97,7 @@ export async function getChallengeDetailBySlug(slug: string, userId: string) {
     startDate: challenge.startDate,
     endDate: challenge.endDate,
     isActive: challenge.isActive,
-    competition: {
-      id: challenge.competition.id,
-      name: challenge.competition.name,
-    },
+    competitions: challenge.competitions.map((item) => item.competition.name),
     fixtures,
   };
 }

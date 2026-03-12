@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { getDailyFixturesForUser } from '@/lib/services/daily-service';
 import { getActiveChallengesFilter } from '@/lib/services/challenge-service';
+import { formatMatchDateTime } from '@/lib/date-format';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -19,7 +20,7 @@ export default async function HomePage() {
     getDailyFixturesForUser(userId),
     prisma.challenge.findMany({
       where: getActiveChallengesFilter(),
-      include: { competition: true },
+      include: { competitions: { include: { competition: true } } },
       orderBy: [{ startDate: 'asc' }],
       take: 8,
     }),
@@ -29,7 +30,7 @@ export default async function HomePage() {
     <main className="mx-auto max-w-md space-y-4 px-4 pb-28 pt-5">
       <header className="rounded-3xl bg-brand p-5 text-black shadow-xl shadow-orange-500/30">
         <p className="text-xs font-black uppercase tracking-[0.18em]">TelcomGoalPredictor • POC</p>
-        <h1 className="mt-2 text-3xl font-black">Pronostics quotidiens & challenges</h1>
+        <h1 className="mt-2 text-3xl font-black">Prono du jour & challenges</h1>
         <p className="mt-2 text-sm font-semibold">Reviens chaque jour, joue les challenges actifs, et grimpe au classement.</p>
       </header>
 
@@ -48,9 +49,8 @@ export default async function HomePage() {
               <div className="mt-2 space-y-2">
                 {fixtures.slice(0, 3).map((fixture) => (
                   <article key={fixture.id} className="rounded-2xl border border-white/15 bg-black p-3">
-                    <p className="text-xs text-zinc-400">{new Date(fixture.kickoff).toLocaleString()} • {fixture.competition}</p>
+                    <p className="text-xs text-zinc-400">{formatMatchDateTime(fixture.kickoff)} • {fixture.competition}</p>
                     <p className="mt-1 font-bold">{fixture.home} vs {fixture.away}</p>
-                    <p className="mt-1 text-xs font-semibold text-brand">{fixture.state === 'saved' ? 'Pronostic enregistré' : 'À pronostiquer'}</p>
                   </article>
                 ))}
                 {fixtures.length === 0 && <p className="text-zinc-300">Aucun match pronosticable.</p>}
@@ -67,7 +67,7 @@ export default async function HomePage() {
         </div>
         {challenges.map((challenge) => (
           <article key={challenge.id} className="card">
-            <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-300">{challenge.competition.name}</p>
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-300">{challenge.competitions.map((item) => item.competition.name).join(' • ') || 'Multi-compétitions'}</p>
             <h3 className="text-lg font-black">{challenge.name}</h3>
             <p className="mt-1 text-xs text-zinc-300">{new Date(challenge.startDate).toLocaleDateString()} → {new Date(challenge.endDate).toLocaleDateString()}</p>
             {challenge.reward && <p className="mt-1 text-sm font-bold text-brand">Lot: {challenge.reward}</p>}

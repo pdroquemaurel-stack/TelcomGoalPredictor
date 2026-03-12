@@ -10,7 +10,7 @@ const schema = z.object({
   name: z.string().min(2),
   slug: z.string().min(2).optional(),
   description: z.string().optional(),
-  competitionId: z.string().min(1),
+  competitionIds: z.array(z.string().min(1)).min(1),
   startDate: z.string(),
   endDate: z.string(),
   reward: z.string().optional(),
@@ -29,7 +29,7 @@ async function requireAdmin() {
 
 export async function GET() {
   if (!(await requireAdmin())) return apiError('FORBIDDEN', 'Admin role required.', 403);
-  const rows = await prisma.challenge.findMany({ include: { competition: true, _count: { select: { fixtures: true } } }, orderBy: [{ createdAt: 'desc' }] });
+  const rows = await prisma.challenge.findMany({ include: { competitions: { include: { competition: true } }, _count: { select: { fixtures: true } } }, orderBy: [{ createdAt: 'desc' }] });
   return apiSuccess(rows);
 }
 
@@ -45,11 +45,11 @@ export async function POST(req: Request) {
       name: data.name,
       slug,
       description: data.description || null,
-      competitionId: data.competitionId,
       startDate: new Date(data.startDate),
       endDate: new Date(data.endDate),
       reward: data.reward || null,
       isActive: data.isActive,
+      competitions: { create: data.competitionIds.map((competitionId) => ({ competitionId })) },
     },
   });
 
