@@ -16,11 +16,19 @@ export async function POST() {
     const from = now.toISOString().slice(0, 10);
     const to = new Date(now.getTime() + 10 * 86400000).toISOString().slice(0, 10);
 
-    await syncCompetitions();
-    await syncFixtures(from, to);
+    const competitions = await syncCompetitions();
+    const fixtures = await syncFixtures(from, to);
     const settlement = await settleFinishedFixtures();
 
-    return apiSuccess({ from, to, settlement });
+    return apiSuccess({
+      from,
+      to,
+      competitionsSynced: competitions.syncedCount,
+      fixturesCreated: fixtures.created,
+      fixturesUpdated: fixtures.updated,
+      fixturesFetched: fixtures.totalFetched,
+      settlement,
+    });
   } catch (error) {
     return apiError('EXTERNAL_PROVIDER_ERROR', 'Fixture sync failed.', 500, error instanceof Error ? error.message : error);
   }

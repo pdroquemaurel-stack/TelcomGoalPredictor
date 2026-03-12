@@ -113,3 +113,46 @@ npm run sync:fixtures
 - Assign logos to teams using `Team.logoUrl` (example: `/teams/morocco.png`).
 - If `logoUrl` is empty, the app automatically tries `/teams/<normalized-team-name>.png`.
 - If the file does not exist, the UI falls back to a circular initials badge.
+
+## Daily predictions & challenges (POC)
+
+### Daily flow (Aujourd’hui / Demain)
+- Only fixtures from competitions with `Competition.isDailyEnabled = true` are included.
+- Daily feed uses a short window: today + tomorrow.
+- Only open/predictable fixtures are shown (`SCHEDULED`, `predictionEnabled`, `visible`).
+- Player entry points:
+  - Home (`/`) section “Matchs du jour & demain”
+  - Dedicated page: `/daily`
+
+### Challenges flow
+- Admin creates a `Challenge` linked to one competition with a period (`startDate` → `endDate`).
+- Matching fixtures are linked into `ChallengeFixture` (unique by `challengeId + fixtureId`).
+- Player entry points:
+  - Challenges list: `/challenges`
+  - Challenge detail: `/challenges/[slug]`
+- Challenge leaderboard is computed dynamically from predictions on challenge fixtures.
+
+### Admin configuration
+- Daily feed toggle per competition: Admin > Competitions (`isDailyEnabled`).
+- Challenge management: Admin > Challenges (create/list/delete in MVP).
+- Manual sync: Admin > Operations > “Actualiser les matchs depuis l’API”.
+- Purge (POC only): Admin > Operations > Danger Zone.
+  - Requires admin role and `DELETE` confirmation.
+  - Removes dependent rows first, then fixtures/competitions/teams.
+- If you previously imported generic team names (e.g. `Team 516`), run:
+  1. Admin > Operations > Purge (confirm `DELETE`)
+  2. Admin > Operations > Manual sync
+  This recreates teams with real `name`, `shortName`, and `crestUrl` from football-data.
+
+### API surface added
+- Player:
+  - `GET /api/public/daily`
+  - `GET /api/public/challenges`
+  - `GET /api/public/challenges/[slug]`
+  - `GET /api/public/challenges/[slug]/leaderboard`
+- Admin:
+  - `GET/POST /api/admin/challenges`
+  - `PATCH/DELETE /api/admin/challenges/[id]`
+  - `PATCH /api/admin/competitions/[id]/daily`
+  - `POST /api/admin/sync` (now returns sync summary)
+  - `POST /api/admin/purge`

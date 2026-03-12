@@ -9,6 +9,7 @@ export function normalizeTeamNameToLogoFile(teamName: string) {
 
 export function getTeamLogoUrl(team: { name: string; logoUrl?: string | null; crestUrl?: string | null }) {
   if (team.logoUrl) return team.logoUrl;
+  if (team.crestUrl) return team.crestUrl;
   const normalized = normalizeTeamNameToLogoFile(team.name);
   return `/teams/${normalized}.png`;
 }

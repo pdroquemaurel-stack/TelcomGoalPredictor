@@ -19,7 +19,10 @@ function mapFixtureState(statusText: string, homeScore?: number, awayScore?: num
 export async function syncCompetitions() {
   const provider = footballProvider();
   const competitions = await provider.getCompetitions();
+  let syncedCount = 0;
+
   for (const competitionData of competitions) {
+    syncedCount += 1;
     await prisma.competition.upsert({
       where: { externalId: competitionData.externalId },
       create: {
@@ -35,26 +38,48 @@ export async function syncCompetitions() {
       },
     });
   }
+
+  return { syncedCount };
 }
 
 export async function syncFixtures(from: string, to: string) {
   const provider = footballProvider();
   const fixtures = await provider.getFixtures({ from, to });
 
+  let created = 0;
+  let updated = 0;
   for (const fixtureData of fixtures) {
     const competition = await prisma.competition.findUnique({ where: { externalId: fixtureData.competitionExternalId } });
     if (!competition) continue;
 
     const homeTeam = await prisma.team.upsert({
       where: { externalId: fixtureData.homeTeamExternalId },
-      create: { externalId: fixtureData.homeTeamExternalId, name: `Team ${fixtureData.homeTeamExternalId}` },
-      update: {},
+      create: {
+        externalId: fixtureData.homeTeamExternalId,
+        name: fixtureData.homeTeamName,
+        shortName: fixtureData.homeTeamShortName ?? null,
+        crestUrl: fixtureData.homeTeamCrest ?? null,
+      },
+      update: {
+        name: fixtureData.homeTeamName,
+        shortName: fixtureData.homeTeamShortName ?? null,
+        crestUrl: fixtureData.homeTeamCrest ?? null,
+      },
     });
 
     const awayTeam = await prisma.team.upsert({
       where: { externalId: fixtureData.awayTeamExternalId },
-      create: { externalId: fixtureData.awayTeamExternalId, name: `Team ${fixtureData.awayTeamExternalId}` },
-      update: {},
+      create: {
+        externalId: fixtureData.awayTeamExternalId,
+        name: fixtureData.awayTeamName,
+        shortName: fixtureData.awayTeamShortName ?? null,
+        crestUrl: fixtureData.awayTeamCrest ?? null,
+      },
+      update: {
+        name: fixtureData.awayTeamName,
+        shortName: fixtureData.awayTeamShortName ?? null,
+        crestUrl: fixtureData.awayTeamCrest ?? null,
+      },
     });
 
     const { fixtureState, predictionEnabled } = mapFixtureState(
@@ -62,6 +87,10 @@ export async function syncFixtures(from: string, to: string) {
       fixtureData.homeScore,
       fixtureData.awayScore,
     );
+
+    const existing = await prisma.fixture.findUnique({ where: { externalId: fixtureData.externalId }, select: { id: true } });
+    if (existing) updated += 1;
+    else created += 1;
 
     await prisma.fixture.upsert({
       where: { externalId: fixtureData.externalId },
@@ -87,4 +116,6 @@ export async function syncFixtures(from: string, to: string) {
       },
     });
   }
+
+  return { created, updated, totalFetched: fixtures.length };
 }

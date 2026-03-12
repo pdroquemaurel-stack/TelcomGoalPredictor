@@ -7,7 +7,13 @@ export interface FootballProvider {
     externalId: string;
     competitionExternalId: string;
     homeTeamExternalId: string;
+    homeTeamName: string;
+    homeTeamShortName?: string;
+    homeTeamCrest?: string;
     awayTeamExternalId: string;
+    awayTeamName: string;
+    awayTeamShortName?: string;
+    awayTeamCrest?: string;
     utcKickoff: string;
     statusText: string;
     homeScore?: number;
