@@ -7,7 +7,7 @@ export async function GET() {
   const now = new Date();
   const challenges = await prisma.challenge.findMany({
     where: getActiveChallengesFilter(now),
-    include: { competition: true, _count: { select: { fixtures: true } } },
+    include: { competitions: { include: { competition: true } }, _count: { select: { fixtures: true } } },
     orderBy: [{ startDate: 'asc' }, { createdAt: 'desc' }],
   });
 
@@ -20,7 +20,7 @@ export async function GET() {
       reward: challenge.reward,
       startDate: challenge.startDate,
       endDate: challenge.endDate,
-      competition: challenge.competition.name,
+      competition: challenge.competitions.map((item) => item.competition.name).join(' • '),
       fixturesCount: challenge._count.fixtures,
     })),
   );

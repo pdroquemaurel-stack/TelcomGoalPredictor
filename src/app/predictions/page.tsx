@@ -1,12 +1,9 @@
 'use client';
 
-import { zodResolver } from '@hookform/resolvers/zod';
 import { Suspense, useEffect, useMemo, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PlayerNav } from '@/components/player-nav';
-import { getTeamInitials } from '@/lib/team-logo';
+import { FixturePredictionCard } from '@/components/fixture-prediction-card';
 
 type Fixture = {
   id: string;
@@ -34,60 +31,15 @@ type Competition = {
 
 type Tab = 'upcoming' | 'past';
 
-const schema = z.object({ fixtureId: z.string(), homeScore: z.coerce.number().min(0).max(20), awayScore: z.coerce.number().min(0).max(20) });
-type FormData = z.infer<typeof schema>;
-
-function getStatus(state: Fixture['state']) {
-  if (state === 'resolved') return { label: 'Result available', tone: 'bg-white text-black' };
-  if (state === 'locked') return { label: 'Locked', tone: 'bg-zinc-500 text-white' };
-  if (state === 'saved') return { label: 'Predicted', tone: 'bg-brand text-black' };
-  return { label: 'Not predicted', tone: 'bg-rose-500 text-white' };
-}
-
-function getPredictionColorClasses(prediction: Fixture['savedPrediction']) {
-  if (!prediction) return { home: 'text-zinc-200', away: 'text-zinc-200' };
-  if (prediction.homeScore > prediction.awayScore) return { home: 'text-green-600', away: 'text-red-600' };
-  if (prediction.homeScore < prediction.awayScore) return { home: 'text-red-600', away: 'text-green-600' };
-  return { home: 'text-orange-500', away: 'text-orange-500' };
-}
-
-function TeamAvatar({ name, logoUrl }: { name: string; logoUrl: string }) {
-  const initials = getTeamInitials(name);
-  return (
-    <span className="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-white/20 bg-white text-xs font-black text-black">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        alt={`${name} logo`}
-        className="h-10 w-10 rounded-full object-cover"
-        onError={(event) => {
-          event.currentTarget.style.display = 'none';
-          const fallback = event.currentTarget.nextElementSibling as HTMLSpanElement | null;
-          if (fallback) fallback.style.display = 'flex';
-        }}
-        src={logoUrl}
-      />
-      <span className="hidden h-10 w-10 items-center justify-center rounded-full bg-zinc-200 text-black">{initials}</span>
-    </span>
-  );
-}
-
 function PredictionsContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [fixtures, setFixtures] = useState<Fixture[]>([]);
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [activeCompetitionId, setActiveCompetitionId] = useState('');
-  const [savingFixtureId, setSavingFixtureId] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>('upcoming');
-
-  const { handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<FormData>({
-    resolver: zodResolver(schema),
-    defaultValues: { fixtureId: '', homeScore: 1, awayScore: 0 },
-  });
-
-  const selectedFixtureId = watch('fixtureId');
 
   const refreshFixtures = async (competitionId?: string | null) => {
     setLoading(true);
@@ -113,25 +65,6 @@ function PredictionsContent() {
   const pastFixtures = useMemo(() => fixtures.filter((f) => +new Date(f.kickoff) < Date.now()).sort((a, b) => +new Date(b.kickoff) - +new Date(a.kickoff)), [fixtures]);
   const visibleFixtures = tab === 'upcoming' ? upcomingFixtures : pastFixtures;
   const activeCompetition = competitions.find((competition) => competition.id === activeCompetitionId);
-
-  const onSubmit = async (data: FormData) => {
-    setSavingFixtureId(data.fixtureId);
-    const res = await fetch('/api/predictions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-
-    if (res.ok) {
-      setMessage('✅ Prono sauvegardé. Modifiable avant le coup d’envoi.');
-      reset({ fixtureId: '', homeScore: 1, awayScore: 0 });
-      await refreshFixtures(activeCompetitionId);
-    } else {
-      const body = await res.json();
-      setMessage(`❌ ${body?.error?.message ?? body?.error ?? 'Impossible de sauvegarder le prono.'}`);
-    }
-    setSavingFixtureId('');
-  };
 
   return (
     <main className="mx-auto max-w-md space-y-4 px-4 pb-28 pt-5">
@@ -159,55 +92,29 @@ function PredictionsContent() {
       </section>
 
       {message && <p className="rounded-2xl border border-brand bg-brand/10 px-4 py-3 text-sm font-semibold text-orange-100">{message}</p>}
-      {errors.fixtureId && <p className="text-sm font-bold text-rose-300">Sélectionne un match avant de sauvegarder.</p>}
       {loading && <section className="card text-sm text-zinc-300">Chargement des matchs...</section>}
 
-      <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
+      <section className="card">
         {visibleFixtures.map((f) => {
-          const status = getStatus(f.state);
-          const isSelected = selectedFixtureId === f.id;
-          const canEdit = f.state === 'open' || f.state === 'saved';
-          const predictionColors = getPredictionColorClasses(f.savedPrediction);
+          const editable = f.state === 'open' || f.state === 'saved';
           return (
-            <article className="card" key={f.id}>
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-300">{new Date(f.kickoff).toLocaleString()}</p>
-                  <div className="mt-2 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-                    <div className="flex items-center gap-2">
-                      <TeamAvatar logoUrl={f.homeLogoUrl} name={f.home} />
-                      <h3 className="text-base font-black leading-tight">{f.home}</h3>
-                    </div>
-                    <div className="rounded-xl bg-black px-3 py-1 text-lg font-black">
-                      {f.savedPrediction ? (
-                        <>
-                          <span className={predictionColors.home}>{f.savedPrediction.homeScore}</span>
-                          <span className="mx-1 text-zinc-500">-</span>
-                          <span className={predictionColors.away}>{f.savedPrediction.awayScore}</span>
-                        </>
-                      ) : (
-                        <span className="text-zinc-300">? - ?</span>
-                      )}
-                    </div>
-                    <div className="flex items-center justify-end gap-2 text-right">
-                      <h3 className="text-base font-black leading-tight">{f.away}</h3>
-                      <TeamAvatar logoUrl={f.awayLogoUrl} name={f.away} />
-                    </div>
-                  </div>
-                </div>
-                <span className={`game-chip ${status.tone}`}>{status.label}</span>
-              </div>
-              {f.finalScore && <div className="mt-2 rounded-2xl border border-white/15 bg-black p-3 text-sm"><p>Score final: <strong>{f.finalScore.homeScore}-{f.finalScore.awayScore}</strong></p><p>Points gagnés: <strong className="text-brand">{f.points}</strong></p></div>}
-              {canEdit && (
-                <>
-                  <button className={`mt-3 w-full rounded-2xl border px-3 py-2 text-sm font-black ${isSelected ? 'border-brand bg-brand/20 text-brand' : 'border-white/20 bg-black text-white'}`} onClick={() => { setValue('fixtureId', f.id); setValue('homeScore', f.savedPrediction?.homeScore ?? 1); setValue('awayScore', f.savedPrediction?.awayScore ?? 0); }} type="button">{isSelected ? 'Match sélectionné' : 'Prédire ce match'}</button>
-                  {isSelected && <div className="mt-3 space-y-2 rounded-2xl border border-white/20 bg-black p-3"><div className="grid grid-cols-2 gap-2"><input className="h-12 rounded-2xl border border-white/20 bg-zinc-900 px-3 text-center text-lg font-black" type="number" min={0} max={20} onChange={(e) => setValue('homeScore', Number(e.target.value))} value={watch('homeScore')} /><input className="h-12 rounded-2xl border border-white/20 bg-zinc-900 px-3 text-center text-lg font-black" type="number" min={0} max={20} onChange={(e) => setValue('awayScore', Number(e.target.value))} value={watch('awayScore')} /></div><button className="cta-primary w-full" disabled={savingFixtureId === f.id} type="submit">{savingFixtureId === f.id ? 'Sauvegarde...' : f.savedPrediction ? 'Mettre à jour' : 'Sauvegarder'}</button></div>}
-                </>
-              )}
-            </article>
+            <FixturePredictionCard
+              key={f.id}
+              away={f.away}
+              awayLogoUrl={f.awayLogoUrl}
+              competition={f.competition}
+              editable={editable}
+              finalScore={f.finalScore}
+              fixtureId={f.id}
+              home={f.home}
+              homeLogoUrl={f.homeLogoUrl}
+              kickoff={f.kickoff}
+              points={f.points}
+              savedPrediction={f.savedPrediction}
+            />
           );
         })}
-      </form>
+      </section>
 
       <PlayerNav />
     </main>
