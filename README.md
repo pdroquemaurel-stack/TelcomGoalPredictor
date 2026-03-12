@@ -139,6 +139,10 @@ npm run sync:fixtures
 - Purge (POC only): Admin > Operations > Danger Zone.
   - Requires admin role and `DELETE` confirmation.
   - Removes dependent rows first, then fixtures/competitions/teams.
+- If you previously imported generic team names (e.g. `Team 516`), run:
+  1. Admin > Operations > Purge (confirm `DELETE`)
+  2. Admin > Operations > Manual sync
+  This recreates teams with real `name`, `shortName`, and `crestUrl` from football-data.
 
 ### API surface added
 - Player:

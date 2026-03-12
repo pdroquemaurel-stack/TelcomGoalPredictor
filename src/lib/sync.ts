@@ -54,14 +54,32 @@ export async function syncFixtures(from: string, to: string) {
 
     const homeTeam = await prisma.team.upsert({
       where: { externalId: fixtureData.homeTeamExternalId },
-      create: { externalId: fixtureData.homeTeamExternalId, name: `Team ${fixtureData.homeTeamExternalId}` },
-      update: {},
+      create: {
+        externalId: fixtureData.homeTeamExternalId,
+        name: fixtureData.homeTeamName,
+        shortName: fixtureData.homeTeamShortName ?? null,
+        crestUrl: fixtureData.homeTeamCrest ?? null,
+      },
+      update: {
+        name: fixtureData.homeTeamName,
+        shortName: fixtureData.homeTeamShortName ?? null,
+        crestUrl: fixtureData.homeTeamCrest ?? null,
+      },
     });
 
     const awayTeam = await prisma.team.upsert({
       where: { externalId: fixtureData.awayTeamExternalId },
-      create: { externalId: fixtureData.awayTeamExternalId, name: `Team ${fixtureData.awayTeamExternalId}` },
-      update: {},
+      create: {
+        externalId: fixtureData.awayTeamExternalId,
+        name: fixtureData.awayTeamName,
+        shortName: fixtureData.awayTeamShortName ?? null,
+        crestUrl: fixtureData.awayTeamCrest ?? null,
+      },
+      update: {
+        name: fixtureData.awayTeamName,
+        shortName: fixtureData.awayTeamShortName ?? null,
+        crestUrl: fixtureData.awayTeamCrest ?? null,
+      },
     });
 
     const { fixtureState, predictionEnabled } = mapFixtureState(
