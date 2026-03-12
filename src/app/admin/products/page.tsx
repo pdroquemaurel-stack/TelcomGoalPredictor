@@ -1,6 +1,8 @@
-import { prisma } from '@/lib/prisma';
-
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-
-export default async function Page(){const items=await prisma.product.findMany();return <div><h1 className='text-2xl font-bold mb-3'>Products / Bonus</h1><div className='card'>{items.map(p=><p key={p.id}>{p.name} • {p.currency} {p.price.toString()} • sponsored:{String(p.sponsored)}</p>)}</div></div>;}
+export default function AdminProductsPage() {
+  return (
+    <div className="space-y-4 text-black">
+      <h1 className="text-2xl font-bold">Products</h1>
+      <p className="rounded-2xl bg-white p-4 text-sm">Product and bonus catalog tooling is disabled in MVP mode.</p>
+    </div>
+  );
+}

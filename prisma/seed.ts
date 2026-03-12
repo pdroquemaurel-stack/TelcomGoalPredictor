@@ -1,178 +1,128 @@
-import { PrismaClient, UserRole, FixtureState } from '@prisma/client';
+import { FixtureState, PrismaClient, UserRole } from '@prisma/client';
 import { hash } from 'bcryptjs';
+import { settleFinishedFixtures } from '@/lib/services/settlement-service';
 
 const prisma = new PrismaClient();
 
-function computePoints(predHome: number, predAway: number, realHome: number, realAway: number) {
-  if (predHome === realHome && predAway === realAway) return 3;
-  const pred = predHome === predAway ? 'D' : predHome > predAway ? 'H' : 'A';
-  const real = realHome === realAway ? 'D' : realHome > realAway ? 'H' : 'A';
-  return pred === real ? 1 : 0;
-}
-
 async function main() {
-  const adminPass = await hash('Admin123!', 10);
-  const playerPass = await hash('Player123!', 10);
+  const adminPassword = await hash('Admin123!', 10);
+  const playerPassword = await hash('Player123!', 10);
 
-  const usersSeed = [
+  const users = [
     { email: 'admin@demo.com', role: UserRole.ADMIN, friendCode: 'ADMIN001', displayName: 'Demo Admin' },
     { email: 'player@demo.com', role: UserRole.PLAYER, friendCode: 'PLAY001', displayName: 'Demo Player' },
     { email: 'amina@demo.com', role: UserRole.PLAYER, friendCode: 'PLAY002', displayName: 'Amina' },
     { email: 'koffi@demo.com', role: UserRole.PLAYER, friendCode: 'PLAY003', displayName: 'Koffi' },
-    { email: 'samir@demo.com', role: UserRole.PLAYER, friendCode: 'PLAY004', displayName: 'Samir' },
   ];
 
-  const users = [] as Array<{ id: string; email: string; displayName: string }>;
+  const seededUsers: Array<{ id: string; email: string }> = [];
 
-  for (const seed of usersSeed) {
+  for (const entry of users) {
     const user = await prisma.user.upsert({
-      where: { email: seed.email },
-      update: { passwordHash: seed.role === UserRole.ADMIN ? adminPass : playerPass, role: seed.role },
+      where: { email: entry.email },
+      update: {
+        role: entry.role,
+        passwordHash: entry.role === UserRole.ADMIN ? adminPassword : playerPassword,
+      },
       create: {
-        email: seed.email,
-        passwordHash: seed.role === UserRole.ADMIN ? adminPass : playerPass,
-        role: seed.role,
-        friendCode: seed.friendCode,
+        email: entry.email,
+        role: entry.role,
+        friendCode: entry.friendCode,
+        passwordHash: entry.role === UserRole.ADMIN ? adminPassword : playerPassword,
       },
     });
 
     await prisma.profile.upsert({
       where: { userId: user.id },
-      update: { displayName: seed.displayName, acceptedTerms: true },
-      create: { userId: user.id, displayName: seed.displayName, acceptedTerms: true, favoriteClub: 'World Cup Fan' },
+      update: { displayName: entry.displayName, acceptedTerms: true },
+      create: { userId: user.id, displayName: entry.displayName, acceptedTerms: true },
     });
 
-    users.push({ id: user.id, email: user.email, displayName: seed.displayName });
+    seededUsers.push({ id: user.id, email: user.email });
   }
 
-  const competitionsData = [
-    { externalId: 'wc2026', name: 'World Cup 2026', code: 'WC2026', displayOrder: 0 },
-    { externalId: 'cafcl', name: 'CAF Champions League', code: 'CAFCL', displayOrder: 1 },
-    { externalId: 'ucl', name: 'Champions League', code: 'UCL', displayOrder: 2 },
-  ];
+  const competition = await prisma.competition.upsert({
+    where: { externalId: 'wc2026-demo' },
+    update: { name: 'World Cup 2026 Demo', code: 'WC2026', active: true, visible: true },
+    create: { externalId: 'wc2026-demo', name: 'World Cup 2026 Demo', code: 'WC2026', active: true, visible: true },
+  });
 
-  const competitions = new Map<string, string>();
-  for (const comp of competitionsData) {
-    const competition = await prisma.competition.upsert({
-      where: { externalId: comp.externalId },
-      update: { name: comp.name, code: comp.code, active: true, visible: true, displayOrder: comp.displayOrder },
-      create: { externalId: comp.externalId, name: comp.name, code: comp.code, active: true, visible: true, displayOrder: comp.displayOrder },
-    });
-    competitions.set(comp.code, competition.id);
-  }
+  const teamNames = ['Senegal', 'Nigeria', 'Morocco', 'Egypt', 'Ghana', 'Cameroon'];
+  const teamIds = new Map<string, string>();
 
-  const teamNames = [
-    'Senegal', 'Nigeria', 'Morocco', 'Egypt', 'Brazil', 'France', 'Germany', 'Argentina',
-    'Al Ahly', 'Wydad AC', 'Mamelodi Sundowns', 'Esperance', 'Real Madrid', 'Barcelona', 'Manchester City', 'Bayern Munich',
-  ];
-
-  const teams = new Map<string, string>();
-  for (const name of teamNames) {
-    const key = `seed-team-${name.toLowerCase().replace(/\s+/g, '-')}`;
+  for (const teamName of teamNames) {
     const team = await prisma.team.upsert({
-      where: { externalId: key },
-      update: { name },
-      create: { externalId: key, name },
+      where: { externalId: `demo-${teamName.toLowerCase()}` },
+      update: { name: teamName },
+      create: { externalId: `demo-${teamName.toLowerCase()}`, name: teamName },
     });
-    teams.set(name, team.id);
+    teamIds.set(teamName, team.id);
   }
 
   const now = Date.now();
-  const fixtureSeeds = [
-    ['wc-1', 'WC2026', 'Senegal', 'Nigeria', now - 4 * 86400000, 2, 1],
-    ['wc-2', 'WC2026', 'Morocco', 'Egypt', now - 3 * 86400000, 1, 1],
-    ['wc-3', 'WC2026', 'Brazil', 'France', now - 2 * 86400000, 0, 2],
-    ['wc-4', 'WC2026', 'Germany', 'Argentina', now + 1 * 86400000, null, null],
-    ['wc-5', 'WC2026', 'Senegal', 'Brazil', now + 2 * 86400000, null, null],
-    ['wc-6', 'WC2026', 'France', 'Nigeria', now + 3 * 86400000, null, null],
-    ['caf-1', 'CAFCL', 'Al Ahly', 'Wydad AC', now - 2 * 86400000, 1, 0],
-    ['caf-2', 'CAFCL', 'Mamelodi Sundowns', 'Esperance', now + 1 * 86400000, null, null],
-    ['ucl-1', 'UCL', 'Real Madrid', 'Manchester City', now - 1 * 86400000, 2, 2],
-    ['ucl-2', 'UCL', 'Barcelona', 'Bayern Munich', now + 2 * 86400000, null, null],
-  ] as const;
+  const fixtures = [
+    { externalId: 'demo-fix-1', home: 'Senegal', away: 'Nigeria', kickoff: new Date(now - 3 * 86400000), statusText: 'FINISHED', state: FixtureState.FINISHED, homeScore: 2, awayScore: 1 },
+    { externalId: 'demo-fix-2', home: 'Morocco', away: 'Egypt', kickoff: new Date(now - 2 * 86400000), statusText: 'FINISHED', state: FixtureState.FINISHED, homeScore: 1, awayScore: 1 },
+    { externalId: 'demo-fix-3', home: 'Ghana', away: 'Cameroon', kickoff: new Date(now + 1 * 86400000), statusText: 'SCHEDULED', state: FixtureState.SCHEDULED, homeScore: null, awayScore: null },
+    { externalId: 'demo-fix-4', home: 'Senegal', away: 'Morocco', kickoff: new Date(now + 2 * 86400000), statusText: 'SCHEDULED', state: FixtureState.SCHEDULED, homeScore: null, awayScore: null },
+  ];
 
-  const fixtures = [] as Array<{ id: string; externalId: string; realHome: number | null; realAway: number | null }>;
+  const createdFixtures: Array<{ id: string; externalId: string }> = [];
 
-  for (const [externalId, code, home, away, kickoffMs, homeScore, awayScore] of fixtureSeeds) {
-    const isCompleted = homeScore !== null && awayScore !== null;
-    const fixture = await prisma.fixture.upsert({
-      where: { externalId },
+  for (const fixture of fixtures) {
+    const row = await prisma.fixture.upsert({
+      where: { externalId: fixture.externalId },
       update: {
-        competitionId: competitions.get(code)!,
-        homeTeamId: teams.get(home)!,
-        awayTeamId: teams.get(away)!,
-        utcKickoff: new Date(kickoffMs),
-        statusText: isCompleted ? 'FINISHED' : 'SCHEDULED',
-        predictionEnabled: true,
-        fixtureState: isCompleted ? FixtureState.COMPLETED : FixtureState.PREDICTION_ENABLED,
-        homeScore,
-        awayScore,
-        visible: true,
+        competitionId: competition.id,
+        homeTeamId: teamIds.get(fixture.home)!,
+        awayTeamId: teamIds.get(fixture.away)!,
+        utcKickoff: fixture.kickoff,
+        statusText: fixture.statusText,
+        fixtureState: fixture.state,
+        predictionEnabled: fixture.state === FixtureState.SCHEDULED,
+        homeScore: fixture.homeScore,
+        awayScore: fixture.awayScore,
       },
       create: {
-        externalId,
-        competitionId: competitions.get(code)!,
-        homeTeamId: teams.get(home)!,
-        awayTeamId: teams.get(away)!,
-        utcKickoff: new Date(kickoffMs),
-        statusText: isCompleted ? 'FINISHED' : 'SCHEDULED',
-        predictionEnabled: true,
-        fixtureState: isCompleted ? FixtureState.COMPLETED : FixtureState.PREDICTION_ENABLED,
-        homeScore,
-        awayScore,
-        visible: true,
+        externalId: fixture.externalId,
+        competitionId: competition.id,
+        homeTeamId: teamIds.get(fixture.home)!,
+        awayTeamId: teamIds.get(fixture.away)!,
+        utcKickoff: fixture.kickoff,
+        statusText: fixture.statusText,
+        fixtureState: fixture.state,
+        predictionEnabled: fixture.state === FixtureState.SCHEDULED,
+        homeScore: fixture.homeScore,
+        awayScore: fixture.awayScore,
       },
     });
-    fixtures.push({ id: fixture.id, externalId, realHome: homeScore, realAway: awayScore });
+
+    createdFixtures.push({ id: row.id, externalId: row.externalId });
   }
 
-  for (const user of users.filter((u) => u.email !== 'admin@demo.com')) {
-    for (const fixture of fixtures) {
-      const isPast = fixture.realHome !== null && fixture.realAway !== null;
-      const shouldPredict = Math.random() > 0.2 || isPast;
-      if (!shouldPredict) continue;
+  const playerUsers = seededUsers.filter((user) => user.email !== 'admin@demo.com');
 
-      const homeScore = isPast ? Math.max(0, (fixture.realHome ?? 0) + (Math.floor(Math.random() * 3) - 1)) : Math.floor(Math.random() * 4);
-      const awayScore = isPast ? Math.max(0, (fixture.realAway ?? 0) + (Math.floor(Math.random() * 3) - 1)) : Math.floor(Math.random() * 4);
+  for (const player of playerUsers) {
+    for (const fixture of createdFixtures) {
+      const samplePrediction = fixture.externalId.endsWith('1')
+        ? { homeScore: 2, awayScore: 1 }
+        : fixture.externalId.endsWith('2')
+          ? { homeScore: 0, awayScore: 0 }
+          : { homeScore: 1, awayScore: 0 };
 
       await prisma.prediction.upsert({
-        where: { userId_fixtureId: { userId: user.id, fixtureId: fixture.id } },
-        update: { homeScore, awayScore },
-        create: { userId: user.id, fixtureId: fixture.id, homeScore, awayScore },
+        where: { userId_fixtureId: { userId: player.id, fixtureId: fixture.id } },
+        update: samplePrediction,
+        create: { userId: player.id, fixtureId: fixture.id, ...samplePrediction },
       });
     }
   }
 
-  for (const user of users) {
-    const predictions = await prisma.prediction.findMany({ where: { userId: user.id }, include: { fixture: true } });
-    const totalPredictions = predictions.length;
-    const exactHits = predictions.filter((prediction) => prediction.fixture.homeScore === prediction.homeScore && prediction.fixture.awayScore === prediction.awayScore).length;
-
-    const settled = predictions.filter((prediction) => prediction.fixture.homeScore !== null && prediction.fixture.awayScore !== null);
-    const totalPoints = settled.reduce((sum, prediction) => sum + computePoints(
-      prediction.homeScore,
-      prediction.awayScore,
-      prediction.fixture.homeScore ?? 0,
-      prediction.fixture.awayScore ?? 0,
-    ), 0);
-
-    const accuracyPct = totalPredictions === 0 ? 0 : Math.round((exactHits / totalPredictions) * 100);
-
-    await prisma.profile.update({
-      where: { userId: user.id },
-      data: {
-        totalPredictions,
-        exactHits,
-        totalPoints,
-        accuracyPct,
-        currentStreak: Math.min(totalPredictions, 4),
-        bestStreak: Math.min(totalPredictions + 1, 6),
-        level: totalPoints > 8 ? 'Pro' : 'Rookie',
-      },
-    });
-  }
+  await settleFinishedFixtures(prisma);
 
   console.log('Seed complete. Admin: admin@demo.com / Admin123! | Player: player@demo.com / Player123!');
 }
 
-main().finally(() => prisma.$disconnect());
+main().finally(async () => {
+  await prisma.$disconnect();
+});

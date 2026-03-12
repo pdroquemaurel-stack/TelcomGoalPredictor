@@ -11,7 +11,8 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "prisma:seed": "tsx prisma/seed.ts",
-    "sync:fixtures": "tsx scripts/sync-fixtures.ts"
+    "sync:fixtures": "tsx scripts/sync-fixtures.ts",
+    "test": "tsx --test tests/*.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",

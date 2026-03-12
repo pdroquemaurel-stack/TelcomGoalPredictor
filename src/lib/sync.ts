@@ -1,14 +1,38 @@
+import { FixtureState } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { footballProvider } from '@/lib/football';
+import { isFixtureFinished } from '@/lib/scoring';
+
+function mapFixtureState(statusText: string, homeScore?: number, awayScore?: number) {
+  if (isFixtureFinished(statusText, homeScore ?? null, awayScore ?? null)) {
+    return { fixtureState: FixtureState.FINISHED, predictionEnabled: false };
+  }
+
+  const normalizedStatus = statusText.toUpperCase();
+  if (['IN_PLAY', 'LIVE', 'PAUSED', 'HT'].includes(normalizedStatus)) {
+    return { fixtureState: FixtureState.LIVE, predictionEnabled: false };
+  }
+
+  return { fixtureState: FixtureState.SCHEDULED, predictionEnabled: true };
+}
 
 export async function syncCompetitions() {
   const provider = footballProvider();
   const competitions = await provider.getCompetitions();
-  for (const c of competitions) {
+  for (const competitionData of competitions) {
     await prisma.competition.upsert({
-      where: { externalId: c.externalId },
-      create: { externalId: c.externalId, code: c.code, name: c.name, country: c.country },
-      update: { code: c.code, name: c.name, country: c.country },
+      where: { externalId: competitionData.externalId },
+      create: {
+        externalId: competitionData.externalId,
+        code: competitionData.code,
+        name: competitionData.name,
+        country: competitionData.country,
+      },
+      update: {
+        code: competitionData.code,
+        name: competitionData.name,
+        country: competitionData.country,
+      },
     });
   }
 }
@@ -16,28 +40,50 @@ export async function syncCompetitions() {
 export async function syncFixtures(from: string, to: string) {
   const provider = footballProvider();
   const fixtures = await provider.getFixtures({ from, to });
-  for (const f of fixtures) {
-    const competition = await prisma.competition.findUnique({ where: { externalId: f.competitionExternalId } });
-    const home = await prisma.team.upsert({ where: { externalId: f.homeTeamExternalId }, create: { externalId: f.homeTeamExternalId, name: `Team ${f.homeTeamExternalId}` }, update: {} });
-    const away = await prisma.team.upsert({ where: { externalId: f.awayTeamExternalId }, create: { externalId: f.awayTeamExternalId, name: `Team ${f.awayTeamExternalId}` }, update: {} });
+
+  for (const fixtureData of fixtures) {
+    const competition = await prisma.competition.findUnique({ where: { externalId: fixtureData.competitionExternalId } });
     if (!competition) continue;
+
+    const homeTeam = await prisma.team.upsert({
+      where: { externalId: fixtureData.homeTeamExternalId },
+      create: { externalId: fixtureData.homeTeamExternalId, name: `Team ${fixtureData.homeTeamExternalId}` },
+      update: {},
+    });
+
+    const awayTeam = await prisma.team.upsert({
+      where: { externalId: fixtureData.awayTeamExternalId },
+      create: { externalId: fixtureData.awayTeamExternalId, name: `Team ${fixtureData.awayTeamExternalId}` },
+      update: {},
+    });
+
+    const { fixtureState, predictionEnabled } = mapFixtureState(
+      fixtureData.statusText,
+      fixtureData.homeScore,
+      fixtureData.awayScore,
+    );
+
     await prisma.fixture.upsert({
-      where: { externalId: f.externalId },
+      where: { externalId: fixtureData.externalId },
       create: {
-        externalId: f.externalId,
+        externalId: fixtureData.externalId,
         competitionId: competition.id,
-        homeTeamId: home.id,
-        awayTeamId: away.id,
-        utcKickoff: new Date(f.utcKickoff),
-        statusText: f.statusText,
-        homeScore: f.homeScore,
-        awayScore: f.awayScore,
+        homeTeamId: homeTeam.id,
+        awayTeamId: awayTeam.id,
+        utcKickoff: new Date(fixtureData.utcKickoff),
+        statusText: fixtureData.statusText,
+        fixtureState,
+        predictionEnabled,
+        homeScore: fixtureData.homeScore,
+        awayScore: fixtureData.awayScore,
       },
       update: {
-        statusText: f.statusText,
-        utcKickoff: new Date(f.utcKickoff),
-        homeScore: f.homeScore,
-        awayScore: f.awayScore,
+        statusText: fixtureData.statusText,
+        fixtureState,
+        predictionEnabled,
+        utcKickoff: new Date(fixtureData.utcKickoff),
+        homeScore: fixtureData.homeScore,
+        awayScore: fixtureData.awayScore,
       },
     });
   }

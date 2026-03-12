@@ -1,6 +1,8 @@
-import { prisma } from '@/lib/prisma';
-
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-
-export default async function Page(){const slots=await prisma.adSlot.findMany({include:{campaign:true}});return <div><h1 className='text-2xl font-bold mb-3'>Ad Inventory</h1><div className='card'>{slots.map(s=><p key={s.id}>{s.code} → {s.campaign?.name || 'No campaign'}</p>)}</div></div>;}
+export default function AdminAdsPage() {
+  return (
+    <div className="space-y-4 text-black">
+      <h1 className="text-2xl font-bold">Ad Inventory</h1>
+      <p className="rounded-2xl bg-white p-4 text-sm">Sponsor inventory management is temporarily disabled for the MVP scope.</p>
+    </div>
+  );
+}

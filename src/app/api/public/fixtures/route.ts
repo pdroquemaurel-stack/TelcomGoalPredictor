@@ -1,19 +1,13 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+import { FixtureState } from '@prisma/client';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-function matchResult(home: number, away: number) {
-  if (home > away) return 'HOME';
-  if (home < away) return 'AWAY';
-  return 'DRAW';
-}
-
 export async function GET(req: Request) {
-  const now = new Date();
   const { searchParams } = new URL(req.url);
   const competitionId = searchParams.get('competitionId');
 
@@ -61,44 +55,31 @@ export async function GET(req: Request) {
       };
     }),
     activeCompetitionId,
-    fixtures: fixtures.map((f) => {
-      const savedPrediction = f.predictions[0] ?? null;
-      const locked = now >= f.utcKickoff;
-      const resolved = f.homeScore !== null && f.awayScore !== null;
+    fixtures: fixtures.map((fixture) => {
+      const savedPrediction = fixture.predictions[0] ?? null;
+      const isResolved = fixture.fixtureState === FixtureState.SETTLED;
+      const isLocked = fixture.fixtureState !== FixtureState.SCHEDULED;
 
       let state: 'open' | 'saved' | 'locked' | 'resolved' = 'open';
-      if (resolved) state = 'resolved';
-      else if (locked) state = 'locked';
+      if (isResolved) state = 'resolved';
+      else if (isLocked) state = 'locked';
       else if (savedPrediction) state = 'saved';
 
-      let resultStatus: 'won' | 'lost' | 'pending' | null = null;
-      let points = 0;
-      if (savedPrediction) {
-        if (!resolved) {
-          resultStatus = 'pending';
-        } else {
-          const exact = savedPrediction.homeScore === f.homeScore && savedPrediction.awayScore === f.awayScore;
-          const predicted = matchResult(savedPrediction.homeScore, savedPrediction.awayScore);
-          const actual = matchResult(f.homeScore ?? 0, f.awayScore ?? 0);
-          points = exact ? 3 : predicted === actual ? 1 : 0;
-          resultStatus = points > 0 ? 'won' : 'lost';
-        }
-      }
-
       return {
-        id: f.id,
-        competitionId: f.competitionId,
-        home: f.homeTeam.name,
-        away: f.awayTeam.name,
-        kickoff: f.utcKickoff,
-        competition: f.competition?.name ?? 'League Match',
+        id: fixture.id,
+        competitionId: fixture.competitionId,
+        home: fixture.homeTeam.name,
+        away: fixture.awayTeam.name,
+        kickoff: fixture.utcKickoff,
+        competition: fixture.competition?.name ?? 'League Match',
         state,
-        points,
+        points: savedPrediction?.pointsAwarded ?? 0,
         savedPrediction: savedPrediction
           ? { homeScore: savedPrediction.homeScore, awayScore: savedPrediction.awayScore }
           : null,
-        finalScore: resolved ? { homeScore: f.homeScore, awayScore: f.awayScore } : null,
-        resultStatus,
+        finalScore: isResolved && fixture.homeScore !== null && fixture.awayScore !== null
+          ? { homeScore: fixture.homeScore, awayScore: fixture.awayScore }
+          : null,
       };
     }),
   });
