@@ -430,6 +430,15 @@ model UserBadge {
   @@unique([userId, badgeId])
 }
 
+
+model AppSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model ThemeConfig {
   id                 String   @id @default(cuid())
   operatorName       String
