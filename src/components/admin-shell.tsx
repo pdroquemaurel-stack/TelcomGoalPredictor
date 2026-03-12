@@ -4,7 +4,9 @@ import { ReactNode } from 'react';
 const links = [
   ['/admin/dashboard', 'Dashboard'],
   ['/admin/competitions', 'Competitions'],
+  ['/admin/challenges', 'Challenges'],
   ['/admin/fixtures', 'Matches'],
+  ['/admin/operations', 'Operations'],
   ['/admin/users', 'Users'],
 ];
 

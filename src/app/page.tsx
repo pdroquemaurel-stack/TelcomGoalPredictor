@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth';
 import { PlayerNav } from '@/components/player-nav';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { getDailyFixturesForUser } from '@/lib/services/daily-service';
+import { getActiveChallengesFilter } from '@/lib/services/challenge-service';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -11,62 +13,68 @@ export default async function HomePage() {
   const session = await getServerSession(authOptions);
   const me = (session?.user as any)?.id as string | undefined;
   const fallbackUser = await prisma.user.findFirst({ select: { id: true } });
-  const userId = me ?? fallbackUser?.id;
+  const userId = me ?? fallbackUser?.id ?? '';
 
-  const competitions = await prisma.competition.findMany({
-    where: { visible: true, active: true },
-    orderBy: [{ displayOrder: 'asc' }, { name: 'asc' }],
-    include: {
-      fixtures: {
-        where: { predictionEnabled: true, visible: true },
-        include: { predictions: { where: { userId: userId ?? '' }, select: { id: true } } },
-      },
-    },
-  });
+  const [daily, challenges] = await Promise.all([
+    getDailyFixturesForUser(userId),
+    prisma.challenge.findMany({
+      where: getActiveChallengesFilter(),
+      include: { competition: true },
+      orderBy: [{ startDate: 'asc' }],
+      take: 8,
+    }),
+  ]);
 
   return (
     <main className="mx-auto max-w-md space-y-4 px-4 pb-28 pt-5">
       <header className="rounded-3xl bg-brand p-5 text-black shadow-xl shadow-orange-500/30">
-        <p className="text-xs font-black uppercase tracking-[0.18em]">FIFA World Cup 2026 POC</p>
-        <h1 className="mt-2 text-3xl font-black">Compétitions à pronostiquer</h1>
-        <p className="mt-2 text-sm font-semibold">Prédisez les scores, suivez votre progression, grimpez au classement.</p>
+        <p className="text-xs font-black uppercase tracking-[0.18em]">TelcomGoalPredictor • POC</p>
+        <h1 className="mt-2 text-3xl font-black">Pronostics quotidiens & challenges</h1>
+        <p className="mt-2 text-sm font-semibold">Reviens chaque jour, joue les challenges actifs, et grimpe au classement.</p>
       </header>
 
       <section className="card border-brand bg-brand/10">
-        <h2 className="section-title">Barème simple</h2>
-        <ul className="mt-2 space-y-1 text-sm">
-          <li>• Score exact = <strong>3 pts</strong></li>
-          <li>• Bon vainqueur / nul = <strong>1 pt</strong></li>
-          <li>• Mauvais pronostic = <strong>0 pt</strong></li>
-        </ul>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="section-title">Matchs du jour & demain</h2>
+          <Link href="/daily" className="text-xs font-black uppercase text-brand">Voir tout</Link>
+        </div>
+        <div className="mt-3 space-y-3 text-sm">
+          {([
+            { label: 'Aujourd’hui', fixtures: daily.today },
+            { label: 'Demain', fixtures: daily.tomorrow },
+          ]).map(({ label, fixtures }) => (
+            <div key={label}>
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-300">{label}</p>
+              <div className="mt-2 space-y-2">
+                {fixtures.slice(0, 3).map((fixture) => (
+                  <article key={fixture.id} className="rounded-2xl border border-white/15 bg-black p-3">
+                    <p className="text-xs text-zinc-400">{new Date(fixture.kickoff).toLocaleString()} • {fixture.competition}</p>
+                    <p className="mt-1 font-bold">{fixture.home} vs {fixture.away}</p>
+                    <p className="mt-1 text-xs font-semibold text-brand">{fixture.state === 'saved' ? 'Pronostic enregistré' : 'À pronostiquer'}</p>
+                  </article>
+                ))}
+                {fixtures.length === 0 && <p className="text-zinc-300">Aucun match pronosticable.</p>}
+              </div>
+            </div>
+          ))}
+        </div>
       </section>
 
       <section className="space-y-3">
-        {competitions.map((competition) => {
-          const total = competition.fixtures.length;
-          const predicted = competition.fixtures.filter((fixture) => fixture.predictions.length > 0).length;
-          const remaining = Math.max(total - predicted, 0);
-
-          return (
-            <article key={competition.id} className={`card ${competition.code === 'WC2026' ? 'border-brand' : ''}`}>
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-300">{competition.code === 'WC2026' ? 'Compétition vedette' : 'Compétition'}</p>
-                  <h2 className="text-xl font-black">{competition.name}</h2>
-                </div>
-                {competition.code === 'WC2026' && <span className="game-chip bg-brand text-black">FEATURED</span>}
-              </div>
-              <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
-                <div className="rounded-2xl bg-black p-3"><p className="text-zinc-300">Matchs</p><p className="text-lg font-black">{total}</p></div>
-                <div className="rounded-2xl bg-black p-3"><p className="text-zinc-300">Pronos faits</p><p className="text-lg font-black text-brand">{predicted}</p></div>
-                <div className="rounded-2xl bg-black p-3"><p className="text-zinc-300">Restants</p><p className="text-lg font-black">{remaining}</p></div>
-              </div>
-              <Link href={`/predictions?competitionId=${competition.id}`} className="cta-primary mt-3 inline-block w-full text-center">
-                Ouvrir la compétition
-              </Link>
-            </article>
-          );
-        })}
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="section-title">Challenges en cours</h2>
+          <Link href="/challenges" className="text-xs font-black uppercase text-brand">Tout voir</Link>
+        </div>
+        {challenges.map((challenge) => (
+          <article key={challenge.id} className="card">
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-300">{challenge.competition.name}</p>
+            <h3 className="text-lg font-black">{challenge.name}</h3>
+            <p className="mt-1 text-xs text-zinc-300">{new Date(challenge.startDate).toLocaleDateString()} → {new Date(challenge.endDate).toLocaleDateString()}</p>
+            {challenge.reward && <p className="mt-1 text-sm font-bold text-brand">Lot: {challenge.reward}</p>}
+            <Link href={`/challenges/${challenge.slug}`} className="cta-primary mt-3 inline-block w-full text-center">Voir le challenge</Link>
+          </article>
+        ))}
+        {challenges.length === 0 && <article className="card text-sm text-zinc-300">Aucun challenge actif pour le moment.</article>}
       </section>
 
       <PlayerNav />

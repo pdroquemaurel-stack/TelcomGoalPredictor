@@ -37,6 +37,18 @@ async function toggleCompetition(formData: FormData) {
   revalidatePath('/');
 }
 
+
+
+async function toggleDailyCompetition(formData: FormData) {
+  "use server";
+  const id = String(formData.get('id') ?? '');
+  const isDailyEnabled = String(formData.get('isDailyEnabled') ?? '') === 'true';
+  if (!id) return;
+  await prisma.competition.update({ where: { id }, data: { isDailyEnabled: !isDailyEnabled } });
+  revalidatePath('/admin/competitions');
+  revalidatePath('/');
+  revalidatePath('/daily');
+}
 export default async function Page() {
   const comps = await prisma.competition.findMany({
     orderBy: [{ displayOrder: 'asc' }, { name: 'asc' }],
@@ -59,7 +71,7 @@ export default async function Page() {
       <div className="overflow-auto rounded-2xl bg-white p-4">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left"><th>Name</th><th>Type</th><th>Status</th><th>Matches</th><th>Action</th></tr>
+            <tr className="text-left"><th>Name</th><th>Type</th><th>Status</th><th>Flux quotidien</th><th>Matches</th><th>Action</th></tr>
           </thead>
           <tbody>
             {comps.map((competition) => {
@@ -84,6 +96,19 @@ export default async function Page() {
                         {competition.active ? 'Active' : 'Inactive'}
                       </span>
                     </Link>
+                  </td>
+                  <td>
+                    <form action={toggleDailyCompetition}>
+                      <input type="hidden" name="id" value={competition.id} />
+                      <input type="hidden" name="isDailyEnabled" value={String(competition.isDailyEnabled)} />
+                      <button
+                        aria-label={`Toggle daily competition ${competition.name}`}
+                        className={`relative inline-flex h-7 w-12 items-center rounded-full p-1 transition ${competition.isDailyEnabled ? 'bg-brand' : 'bg-zinc-300'}`}
+                        type="submit"
+                      >
+                        <span className={`h-5 w-5 rounded-full bg-white shadow transition ${competition.isDailyEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
+                      </button>
+                    </form>
                   </td>
                   <td>
                     <Link className="block w-full" href={targetUrl}>{competition._count.fixtures}</Link>

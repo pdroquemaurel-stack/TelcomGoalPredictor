@@ -210,12 +210,14 @@ model Competition {
   country      String?
   active       Boolean  @default(true)
   visible      Boolean  @default(true)
+  isDailyEnabled Boolean @default(false)
   displayOrder Int      @default(0)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  fixtures  Fixture[]
-  campaigns SponsorCampaign[]
+  fixtures   Fixture[]
+  campaigns  SponsorCampaign[]
+  challenges Challenge[]
 
   @@index([active, visible])
 }
@@ -255,10 +257,44 @@ model Fixture {
   competition Competition  @relation(fields: [competitionId], references: [id], onDelete: Cascade)
   homeTeam    Team         @relation("HomeTeam", fields: [homeTeamId], references: [id])
   awayTeam    Team         @relation("AwayTeam", fields: [awayTeamId], references: [id])
-  predictions Prediction[]
+  predictions       Prediction[]
+  challengeFixtures ChallengeFixture[]
 
   @@index([utcKickoff])
   @@index([predictionEnabled, visible])
+}
+
+model Challenge {
+  id            String   @id @default(cuid())
+  name          String
+  slug          String   @unique
+  description   String?
+  competitionId String
+  startDate     DateTime
+  endDate       DateTime
+  reward        String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  competition Competition      @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  fixtures    ChallengeFixture[]
+
+  @@index([isActive, startDate, endDate])
+  @@index([competitionId])
+}
+
+model ChallengeFixture {
+  id          String   @id @default(cuid())
+  challengeId String
+  fixtureId   String
+  createdAt   DateTime @default(now())
+
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  fixture   Fixture   @relation(fields: [fixtureId], references: [id], onDelete: Cascade)
+
+  @@unique([challengeId, fixtureId])
+  @@index([fixtureId])
 }
 
 model Prediction {
