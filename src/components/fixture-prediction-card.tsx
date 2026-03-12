@@ -7,6 +7,7 @@ import { formatMatchDateTime } from '@/lib/date-format';
 type Prediction = { homeScore: number; awayScore: number } | null;
 
 type FixturePredictionCardProps = {
+  odds?: { home: number | null; draw: number | null; away: number | null; sampleSize: number };
   fixtureId: string;
   kickoff: string | Date;
   competition: string;
@@ -48,13 +49,19 @@ function TeamAvatar({ name, logoUrl }: { name: string; logoUrl: string }) {
   );
 }
 
+
+function formatOdds(value: number | null) {
+  if (value === null) return '∞';
+  return value.toFixed(2);
+}
+
 function toScoreValue(value: string) {
   if (!/^\d{1,2}$/.test(value)) return null;
   return Math.max(0, Math.min(20, Number(value)));
 }
 
 export function FixturePredictionCard(props: FixturePredictionCardProps) {
-  const { fixtureId, kickoff, competition, home, homeLogoUrl, away, awayLogoUrl, editable, onSaved, finalScore, points } = props;
+  const { fixtureId, kickoff, competition, home, homeLogoUrl, away, awayLogoUrl, editable, onSaved, finalScore, points, odds } = props;
   const [prediction, setPrediction] = useState<Prediction>(props.savedPrediction);
   const [homeScore, setHomeScore] = useState(props.savedPrediction ? String(props.savedPrediction.homeScore) : '');
   const [awayScore, setAwayScore] = useState(props.savedPrediction ? String(props.savedPrediction.awayScore) : '');
@@ -158,6 +165,14 @@ export function FixturePredictionCard(props: FixturePredictionCardProps) {
               <span className="text-zinc-300">? - ?</span>
             )}
           </div>
+          {odds && (
+            <div className="grid w-full grid-cols-3 text-center text-[10px] font-bold text-zinc-300">
+              <span>{formatOdds(odds.home)}</span>
+              <span>{formatOdds(odds.draw)}</span>
+              <span>{formatOdds(odds.away)}</span>
+            </div>
+          )}
+          {odds && <p className="text-[10px] text-zinc-500">Côtes communauté ({odds.sampleSize} pronos)</p>}
           {(saving || saveState) && editable && <p className="text-[10px] text-zinc-400">{saving ? 'Sauvegarde…' : saveState}</p>}
           {finalScore && <p className="text-[10px] text-zinc-300">Final: {finalScore.homeScore}-{finalScore.awayScore} {typeof points === 'number' ? `• ${points} pts` : ''}</p>}
         </div>

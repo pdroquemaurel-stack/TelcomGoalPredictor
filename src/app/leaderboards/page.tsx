@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { PlayerNav } from '@/components/player-nav';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { InviteFriendModal } from '@/components/invite-friend-modal';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -16,7 +17,10 @@ export default async function LeaderboardsPage({ searchParams }: { searchParams?
   const userId = me ?? fallback?.id;
   const scope = (searchParams?.scope as Scope) || 'global';
 
-  const meProfile = userId ? await prisma.profile.findUnique({ where: { userId } }) : null;
+  const [meProfile, meUser] = userId ? await Promise.all([
+    prisma.profile.findUnique({ where: { userId } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { friendCode: true } }),
+  ]) : [null, null];
   const friendshipLinks = userId
     ? await prisma.friendship.findMany({
       where: {
@@ -50,13 +54,18 @@ export default async function LeaderboardsPage({ searchParams }: { searchParams?
         <p className="mt-1 text-sm font-semibold">Repérez rapidement votre position.</p>
       </header>
 
-      <section className="card border-brand bg-brand/10">
+      <section className="card border-brand bg-brand/10 space-y-3">
         <h2 className="section-title">Type de classement</h2>
         <div className="mt-2 grid grid-cols-3 gap-2">
           <Link href="/leaderboards?scope=global" className={`rounded-xl px-3 py-2 text-center text-xs font-black ${scope === 'global' ? 'bg-brand text-black' : 'border border-white/20'}`}>Global</Link>
           <Link href="/leaderboards?scope=country" className={`rounded-xl px-3 py-2 text-center text-xs font-black ${scope === 'country' ? 'bg-brand text-black' : 'border border-white/20'}`}>Pays</Link>
           <Link href="/leaderboards?scope=friends" className={`rounded-xl px-3 py-2 text-center text-xs font-black ${scope === 'friends' ? 'bg-brand text-black' : 'border border-white/20'}`}>Amis</Link>
         </div>
+        {scope === 'friends' && meUser?.friendCode && (
+          <div className="pt-1">
+            <InviteFriendModal defaultAppUrl={process.env.NEXT_PUBLIC_APP_URL} friendCode={meUser.friendCode} />
+          </div>
+        )}
       </section>
 
       <section className="space-y-2">
