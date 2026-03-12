@@ -6,7 +6,6 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PlayerNav } from '@/components/player-nav';
-import { WorldCup2026Poc } from '@/components/world-cup-2026-poc';
 
 type Fixture = {
   id: string;
@@ -65,6 +64,11 @@ function PredictionsContent() {
     const query = competitionId ? `?competitionId=${competitionId}` : '';
     const res = await fetch(`/api/public/fixtures${query}`, { cache: 'no-store' });
     const d = await res.json();
+    if (!res.ok) {
+      setMessage(`❌ ${d?.error?.message ?? 'Erreur de chargement des matchs.'}`);
+      setLoading(false);
+      return;
+    }
     setCompetitions(d.competitions || []);
     setActiveCompetitionId(d.activeCompetitionId || '');
     setFixtures(d.fixtures || []);
@@ -94,7 +98,7 @@ function PredictionsContent() {
       await refreshFixtures(activeCompetitionId);
     } else {
       const body = await res.json();
-      setMessage(`❌ ${body.error ?? 'Impossible de sauvegarder le prono.'}`);
+      setMessage(`❌ ${body?.error?.message ?? body?.error ?? 'Impossible de sauvegarder le prono.'}`);
     }
     setSavingFixtureId('');
   };
@@ -155,7 +159,6 @@ function PredictionsContent() {
         })}
       </form>
 
-      {activeCompetition?.code === 'WC2026' && <WorldCup2026Poc />}
       <PlayerNav />
     </main>
   );

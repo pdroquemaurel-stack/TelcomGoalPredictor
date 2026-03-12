@@ -1,26 +1,55 @@
 import { getServerSession } from 'next-auth';
 import { z } from 'zod';
-import { NextResponse } from 'next/server';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { apiError, apiSuccess } from '@/lib/api';
+import { canSubmitPrediction } from '@/lib/services/prediction-rules';
 
-const schema = z.object({ fixtureId: z.string(), homeScore: z.number().min(0).max(20), awayScore: z.number().min(0).max(20) });
+const schema = z.object({
+  fixtureId: z.string().min(1),
+  homeScore: z.number().min(0).max(20),
+  awayScore: z.number().min(0).max(20),
+});
 
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const parsed = schema.safeParse(await req.json());
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+  try {
+    const session = await getServerSession(authOptions);
+    const userId = (session?.user as any)?.id as string | undefined;
+    if (!userId) return apiError('UNAUTHORIZED', 'Authentication required.', 401);
 
-  const fixture = await prisma.fixture.findUnique({ where: { id: parsed.data.fixtureId } });
-  if (!fixture) return NextResponse.json({ error: 'Fixture not found' }, { status: 404 });
-  if (!fixture.predictionEnabled || new Date() >= fixture.utcKickoff) return NextResponse.json({ error: 'Prediction locked' }, { status: 400 });
+    const parsed = schema.safeParse(await req.json());
+    if (!parsed.success) {
+      return apiError('VALIDATION_ERROR', 'Invalid prediction payload.', 400, parsed.error.flatten());
+    }
 
-  const prediction = await prisma.prediction.upsert({
-    where: { userId_fixtureId: { userId: (session.user as any).id, fixtureId: fixture.id } },
-    create: { userId: (session.user as any).id, fixtureId: fixture.id, homeScore: parsed.data.homeScore, awayScore: parsed.data.awayScore },
-    update: { homeScore: parsed.data.homeScore, awayScore: parsed.data.awayScore },
-  });
+    const fixture = await prisma.fixture.findUnique({ where: { id: parsed.data.fixtureId } });
+    if (!fixture || !fixture.visible) {
+      return apiError('NOT_FOUND', 'Fixture not found.', 404);
+    }
 
-  return NextResponse.json({ ok: true, prediction });
+    if (!canSubmitPrediction(fixture.fixtureState, fixture.predictionEnabled, fixture.utcKickoff)) {
+      return apiError('PREDICTION_LOCKED', 'Predictions are locked for this fixture.', 400, {
+        fixtureState: fixture.fixtureState,
+        kickoff: fixture.utcKickoff,
+      });
+    }
+
+    const prediction = await prisma.prediction.upsert({
+      where: { userId_fixtureId: { userId, fixtureId: fixture.id } },
+      create: {
+        userId,
+        fixtureId: fixture.id,
+        homeScore: parsed.data.homeScore,
+        awayScore: parsed.data.awayScore,
+      },
+      update: {
+        homeScore: parsed.data.homeScore,
+        awayScore: parsed.data.awayScore,
+      },
+    });
+
+    return apiSuccess({ prediction });
+  } catch (error) {
+    return apiError('INTERNAL_ERROR', 'Failed to save prediction.', 500, error instanceof Error ? error.message : error);
+  }
 }

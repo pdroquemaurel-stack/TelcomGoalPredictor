@@ -19,11 +19,10 @@ enum UserRole {
 }
 
 enum FixtureState {
-  IMPORTED
-  VISIBLE
-  PREDICTION_ENABLED
-  FEATURED
-  COMPLETED
+  SCHEDULED
+  LIVE
+  FINISHED
+  SETTLED
 }
 
 enum FriendRequestStatus {
@@ -236,7 +235,7 @@ model Fixture {
   awayTeamId        String
   utcKickoff        DateTime
   statusText        String
-  fixtureState      FixtureState @default(IMPORTED)
+  fixtureState      FixtureState @default(SCHEDULED)
   homeScore         Int?
   awayScore         Int?
   predictionEnabled Boolean      @default(false)
@@ -285,6 +284,7 @@ model LeaderboardSnapshot {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([scope, period, createdAt])
+  @@index([userId, createdAt])
 }
 
 model SponsorCampaign {

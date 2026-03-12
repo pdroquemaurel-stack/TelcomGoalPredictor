@@ -1,4 +1,3 @@
-import { AdSlotView } from '@/components/ad-slot';
 import { PlayerNav } from '@/components/player-nav';
 import { prisma } from '@/lib/prisma';
 
@@ -11,7 +10,6 @@ export default async function ResultsPage() {
   return (
     <main className="mx-auto max-w-3xl space-y-3 p-4 pb-24">
       <h1 className="text-xl font-bold">Results & Scoring</h1>
-      <AdSlotView code="RESULT_PAGE_SPONSOR" />
       {fixtures.map((f) => (
         <div className="card" key={f.id}>
           <p>{f.homeTeam.name} {f.homeScore} - {f.awayScore} {f.awayTeam.name}</p>

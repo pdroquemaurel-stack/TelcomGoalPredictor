@@ -32,7 +32,7 @@ async function createMatch(formData: FormData) {
       awayTeamId: awayTeam.id,
       utcKickoff: new Date(kickoff),
       statusText: 'SCHEDULED',
-      fixtureState: FixtureState.PREDICTION_ENABLED,
+      fixtureState: FixtureState.SCHEDULED,
       predictionEnabled: true,
       visible: true,
     },

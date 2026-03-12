@@ -1,6 +1,8 @@
-import { prisma } from '@/lib/prisma';
-
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-
-export default async function Page(){const items=await prisma.sponsorCampaign.findMany({orderBy:{priority:'desc'}});return <div><h1 className='text-2xl font-bold mb-3'>Sponsor Campaigns</h1><div className='card'>{items.map(c=><p key={c.id}>{c.name} • {c.type} • active:{String(c.active)}</p>)}</div></div>;}
+export default function AdminCampaignsPage() {
+  return (
+    <div className="space-y-4 text-black">
+      <h1 className="text-2xl font-bold">Campaigns</h1>
+      <p className="rounded-2xl bg-white p-4 text-sm">Campaign management is out of scope for this MVP and has been disabled.</p>
+    </div>
+  );
+}
