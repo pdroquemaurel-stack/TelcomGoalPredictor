@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { getDailyFixturesForUser } from '@/lib/services/daily-service';
 import { getActiveChallengesFilter } from '@/lib/services/challenge-service';
+import { formatMatchDateTime } from '@/lib/date-format';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
