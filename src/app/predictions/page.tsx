@@ -94,24 +94,24 @@ function PredictionsContent() {
       {message && <p className="rounded-2xl border border-brand bg-brand/10 px-4 py-3 text-sm font-semibold text-orange-100">{message}</p>}
       {loading && <section className="card text-sm text-zinc-300">Chargement des matchs...</section>}
 
-      <section className="space-y-4">
+      <section className="card">
         {visibleFixtures.map((f) => {
           const editable = f.state === 'open' || f.state === 'saved';
           return (
-            <div className="card" key={f.id}>
-              <FixturePredictionCard
-                away={f.away}
-                awayLogoUrl={f.awayLogoUrl}
-                competition={f.competition}
-                editable={editable}
-                fixtureId={f.id}
-                home={f.home}
-                homeLogoUrl={f.homeLogoUrl}
-                kickoff={f.kickoff}
-                savedPrediction={f.savedPrediction}
-              />
-              {f.finalScore && <div className="mt-2 rounded-2xl border border-white/15 bg-black p-3 text-sm"><p>Score final: <strong>{f.finalScore.homeScore}-{f.finalScore.awayScore}</strong></p><p>Points gagnés: <strong className="text-brand">{f.points}</strong></p></div>}
-            </div>
+            <FixturePredictionCard
+              key={f.id}
+              away={f.away}
+              awayLogoUrl={f.awayLogoUrl}
+              competition={f.competition}
+              editable={editable}
+              finalScore={f.finalScore}
+              fixtureId={f.id}
+              home={f.home}
+              homeLogoUrl={f.homeLogoUrl}
+              kickoff={f.kickoff}
+              points={f.points}
+              savedPrediction={f.savedPrediction}
+            />
           );
         })}
       </section>
