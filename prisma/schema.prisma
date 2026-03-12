@@ -177,6 +177,7 @@ model Profile {
   qrCodeData           String?
   countryId            String?
   cityId               String?
+  onboardingCompleted  Boolean @default(false)
 
   user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   country Country? @relation(fields: [countryId], references: [id])
