@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { FixtureState } from '@prisma/client';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { getTeamLogoUrl } from '@/lib/team-logo';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -69,7 +70,9 @@ export async function GET(req: Request) {
         id: fixture.id,
         competitionId: fixture.competitionId,
         home: fixture.homeTeam.name,
+        homeLogoUrl: getTeamLogoUrl(fixture.homeTeam),
         away: fixture.awayTeam.name,
+        awayLogoUrl: getTeamLogoUrl(fixture.awayTeam),
         kickoff: fixture.utcKickoff,
         competition: fixture.competition?.name ?? 'League Match',
         state,

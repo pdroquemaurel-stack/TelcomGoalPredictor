@@ -25,6 +25,11 @@ enum FixtureState {
   SETTLED
 }
 
+enum CompetitionType {
+  NATIONAL
+  CLUB
+}
+
 enum FriendRequestStatus {
   PENDING
   ACCEPTED
@@ -201,6 +206,7 @@ model Competition {
   externalId   String   @unique
   code         String?
   name         String
+  type         CompetitionType @default(CLUB)
   country      String?
   active       Boolean  @default(true)
   visible      Boolean  @default(true)
@@ -220,6 +226,7 @@ model Team {
   name       String
   shortName  String?
   crestUrl   String?
+  logoUrl    String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 

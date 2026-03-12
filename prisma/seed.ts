@@ -1,4 +1,5 @@
-import { FixtureState, PrismaClient, UserRole } from '@prisma/client';
+import { CompetitionType, FixtureState, PrismaClient, UserRole } from '@prisma/client';
+import { normalizeTeamNameToLogoFile } from '@/lib/team-logo';
 import { hash } from 'bcryptjs';
 import { settleFinishedFixtures } from '@/lib/services/settlement-service';
 
@@ -43,8 +44,8 @@ async function main() {
 
   const competition = await prisma.competition.upsert({
     where: { externalId: 'wc2026-demo' },
-    update: { name: 'World Cup 2026 Demo', code: 'WC2026', active: true, visible: true },
-    create: { externalId: 'wc2026-demo', name: 'World Cup 2026 Demo', code: 'WC2026', active: true, visible: true },
+    update: { name: 'World Cup 2026 Demo', code: 'WC2026', type: CompetitionType.NATIONAL, active: true, visible: true },
+    create: { externalId: 'wc2026-demo', name: 'World Cup 2026 Demo', code: 'WC2026', type: CompetitionType.NATIONAL, active: true, visible: true },
   });
 
   const teamNames = ['Senegal', 'Nigeria', 'Morocco', 'Egypt', 'Ghana', 'Cameroon'];
@@ -53,8 +54,8 @@ async function main() {
   for (const teamName of teamNames) {
     const team = await prisma.team.upsert({
       where: { externalId: `demo-${teamName.toLowerCase()}` },
-      update: { name: teamName },
-      create: { externalId: `demo-${teamName.toLowerCase()}`, name: teamName },
+      update: { name: teamName, logoUrl: `/teams/${normalizeTeamNameToLogoFile(teamName)}.png` },
+      create: { externalId: `demo-${teamName.toLowerCase()}`, name: teamName, logoUrl: `/teams/${normalizeTeamNameToLogoFile(teamName)}.png` },
     });
     teamIds.set(teamName, team.id);
   }

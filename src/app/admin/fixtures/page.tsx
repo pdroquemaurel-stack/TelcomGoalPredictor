@@ -1,6 +1,8 @@
+import Link from 'next/link';
 import { revalidatePath } from 'next/cache';
 import { FixtureState } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import { AdminDateTimePicker } from '@/components/admin-datetime-picker';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -39,24 +41,46 @@ async function createMatch(formData: FormData) {
   });
 
   revalidatePath('/admin/fixtures');
+  revalidatePath('/predictions');
 }
 
-export default async function AdminFixturesPage() {
+export default async function AdminFixturesPage({ searchParams }: { searchParams?: { competitionId?: string | string[] } }) {
+  const competitionId = Array.isArray(searchParams?.competitionId) ? searchParams?.competitionId[0] : searchParams?.competitionId;
+
   const [fixtures, competitions] = await Promise.all([
-    prisma.fixture.findMany({ include: { competition: true, homeTeam: true, awayTeam: true }, orderBy: { utcKickoff: 'asc' }, take: 80 }),
-    prisma.competition.findMany({ where: { active: true }, orderBy: [{ displayOrder: 'asc' }, { name: 'asc' }] }),
+    prisma.fixture.findMany({
+      where: competitionId ? { competitionId } : undefined,
+      include: { competition: true, homeTeam: true, awayTeam: true },
+      orderBy: { utcKickoff: 'asc' },
+      take: 80,
+    }),
+    prisma.competition.findMany({ orderBy: [{ displayOrder: 'asc' }, { name: 'asc' }] }),
   ]);
+
+  const selectedCompetition = competitionId ? competitions.find((competition) => competition.id === competitionId) : null;
 
   return (
     <div className="space-y-4 text-black">
-      <h1 className="text-2xl font-bold">Matches</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Matches</h1>
+        <Link className="rounded border border-zinc-300 px-3 py-2 text-sm font-semibold" href="/admin/competitions">
+          ← Back to competitions
+        </Link>
+      </div>
+
+      {selectedCompetition && (
+        <p className="rounded-xl border border-brand/40 bg-brand/10 px-3 py-2 text-sm font-semibold">
+          Showing fixtures for <span className="font-black">{selectedCompetition.name}</span>
+        </p>
+      )}
+
       <form action={createMatch} className="grid gap-2 rounded-2xl bg-white p-4 md:grid-cols-5">
-        <select className="rounded border p-2" name="competitionId" required>
+        <select className="rounded border p-2" defaultValue={competitionId} name="competitionId" required>
           {competitions.map((competition) => <option key={competition.id} value={competition.id}>{competition.name}</option>)}
         </select>
         <input className="rounded border p-2" name="home" placeholder="Home team" required />
         <input className="rounded border p-2" name="away" placeholder="Away team" required />
-        <input className="rounded border p-2" type="datetime-local" name="kickoff" required />
+        <AdminDateTimePicker name="kickoff" required />
         <button className="rounded bg-brand px-3 py-2 font-bold text-black" type="submit">Add match</button>
       </form>
 
@@ -72,6 +96,11 @@ export default async function AdminFixturesPage() {
                 <td>{fixture.fixtureState}</td>
               </tr>
             ))}
+            {!fixtures.length && (
+              <tr>
+                <td className="py-4 text-zinc-500" colSpan={4}>No fixtures found for this competition.</td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
