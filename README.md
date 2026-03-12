@@ -101,3 +101,15 @@ npm run prisma:deploy
 npm run prisma:seed
 npm run sync:fixtures
 ```
+
+## Team logos (player match cards)
+
+- Store logo files in: `public/teams/`
+- Recommended naming convention:
+  - lowercase
+  - kebab-case
+  - stable names
+  - examples: `france.png`, `morocco.png`, `ivory-coast.png`, `manchester-city.png`
+- Assign logos to teams using `Team.logoUrl` (example: `/teams/morocco.png`).
+- If `logoUrl` is empty, the app automatically tries `/teams/<normalized-team-name>.png`.
+- If the file does not exist, the UI falls back to a circular initials badge.
