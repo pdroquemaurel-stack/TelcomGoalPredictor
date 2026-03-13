@@ -1,9 +1,5 @@
--- NOTE:
--- This migration is intentionally defensive because some environments may not
--- have the Challenge table yet when this migration runs.
---
--- If Challenge does not exist yet, this migration safely no-ops and a later
--- migration performs the Challenge -> ChallengeCompetition normalization.
+-- Ensure Challenge -> ChallengeCompetition normalization is applied after
+-- Challenge creation migrations in all environments.
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -14,13 +10,19 @@ BEGIN
     RETURN;
   END IF;
 
-  CREATE TABLE IF NOT EXISTS "ChallengeCompetition" (
-      "id" TEXT NOT NULL,
-      "challengeId" TEXT NOT NULL,
-      "competitionId" TEXT NOT NULL,
-      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      CONSTRAINT "ChallengeCompetition_pkey" PRIMARY KEY ("id")
-  );
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'ChallengeCompetition'
+  ) THEN
+    CREATE TABLE "ChallengeCompetition" (
+        "id" TEXT NOT NULL,
+        "challengeId" TEXT NOT NULL,
+        "competitionId" TEXT NOT NULL,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "ChallengeCompetition_pkey" PRIMARY KEY ("id")
+    );
+  END IF;
 
   CREATE UNIQUE INDEX IF NOT EXISTS "ChallengeCompetition_challengeId_competitionId_key"
     ON "ChallengeCompetition"("challengeId", "competitionId");
@@ -52,7 +54,8 @@ END $$;
 DO $$
 BEGIN
   IF EXISTS (
-    SELECT 1 FROM information_schema.tables
+    SELECT 1
+    FROM information_schema.tables
     WHERE table_schema = 'public' AND table_name = 'Competition'
   ) THEN
     ALTER TABLE "ChallengeCompetition"

@@ -5,6 +5,18 @@ import { settleFinishedFixtures } from '@/lib/services/settlement-service';
 
 const prisma = new PrismaClient();
 
+async function resolveAvailableFriendCode(baseCode: string) {
+  let candidate = baseCode;
+  let suffix = 1;
+
+  while (await prisma.user.findUnique({ where: { friendCode: candidate }, select: { id: true } })) {
+    candidate = `${baseCode}${String(suffix).padStart(2, '0')}`;
+    suffix += 1;
+  }
+
+  return candidate;
+}
+
 async function main() {
   const adminPassword = await hash('Admin123!', 10);
   const playerPassword = await hash('Player123!', 10);
@@ -19,6 +31,8 @@ async function main() {
   const seededUsers: Array<{ id: string; email: string }> = [];
 
   for (const entry of users) {
+    const existingByEmail = await prisma.user.findUnique({ where: { email: entry.email }, select: { id: true } });
+
     const user = await prisma.user.upsert({
       where: { email: entry.email },
       update: {
@@ -28,7 +42,7 @@ async function main() {
       create: {
         email: entry.email,
         role: entry.role,
-        friendCode: entry.friendCode,
+        friendCode: existingByEmail ? entry.friendCode : await resolveAvailableFriendCode(entry.friendCode),
         passwordHash: entry.role === UserRole.ADMIN ? adminPassword : playerPassword,
       },
     });
@@ -124,6 +138,11 @@ async function main() {
   console.log('Seed complete. Admin: admin@demo.com / Admin123! | Player: player@demo.com / Player123!');
 }
 
-main().finally(async () => {
-  await prisma.$disconnect();
-});
+main()
+  .catch((error) => {
+    console.error('Seed failed:', error);
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
