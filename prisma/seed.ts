@@ -9,12 +9,13 @@ async function main() {
   const adminPassword = await hash('Admin123!', 10);
   const playerPassword = await hash('Player123!', 10);
 
+
   const users = [
-    { email: 'admin@demo.com', role: UserRole.ADMIN, friendCode: 'ADMIN001', displayName: 'Demo Admin' },
-    { email: 'player@demo.com', role: UserRole.PLAYER, friendCode: 'PLAY001', displayName: 'Demo Player' },
-    { email: 'amina@demo.com', role: UserRole.PLAYER, friendCode: 'PLAY002', displayName: 'Amina' },
-    { email: 'koffi@demo.com', role: UserRole.PLAYER, friendCode: 'PLAY003', displayName: 'Koffi' },
-  ];
+  { email: 'admin@demo.com', username: 'admin', role: UserRole.ADMIN, friendCode: 'ADMIN001', displayName: 'Demo Admin' },
+  { email: 'player@demo.com', username: 'player', role: UserRole.PLAYER, friendCode: 'PLAY001', displayName: 'Demo Player' },
+  { email: 'amina@demo.com', username: 'amina', role: UserRole.PLAYER, friendCode: 'PLAY002', displayName: 'Amina' },
+  { email: 'koffi@demo.com', username: 'koffi', role: UserRole.PLAYER, friendCode: 'PLAY003', displayName: 'Koffi' },
+];
 
   const seededUsers: Array<{ id: string; email: string }> = [];
 
