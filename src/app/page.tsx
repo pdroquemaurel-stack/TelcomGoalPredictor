@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { getDailyFixturesForUser } from '@/lib/services/daily-service';
 import { getActiveChallengesFilter } from '@/lib/services/challenge-service';
+import { formatMatchDateTime } from '@/lib/date-format';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -25,7 +26,7 @@ export default async function HomePage() {
   ]);
 
   const displayName = profile?.displayName ?? fallbackUser?.email ?? 'Joueur';
-  const dailyFixtures = daily.upcomingGroups[0]?.fixtures ?? [];
+  const dailyFixtures = daily.today;
   const completedToday = dailyFixtures.filter((fixture) => fixture.savedPrediction).length;
   const totalToday = dailyFixtures.length;
 

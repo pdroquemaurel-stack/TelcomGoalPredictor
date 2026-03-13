@@ -19,7 +19,6 @@ type FixturePredictionCardProps = {
   finalScore?: { homeScore: number; awayScore: number } | null;
   points?: number;
   onSaved?: (prediction: { homeScore: number; awayScore: number }) => void;
-  odds?: { homeWin: string; draw: string; awayWin: string } | null;
 };
 
 function getPredictionColorClasses(prediction: Prediction) {
@@ -55,7 +54,7 @@ function toScoreValue(value: string) {
 }
 
 export function FixturePredictionCard(props: FixturePredictionCardProps) {
-  const { fixtureId, kickoff, competition, home, homeLogoUrl, away, awayLogoUrl, editable, onSaved, finalScore, points, odds } = props;
+  const { fixtureId, kickoff, competition, home, homeLogoUrl, away, awayLogoUrl, editable, onSaved, finalScore, points } = props;
   const [prediction, setPrediction] = useState<Prediction>(props.savedPrediction);
   const [homeScore, setHomeScore] = useState(props.savedPrediction ? String(props.savedPrediction.homeScore) : '');
   const [awayScore, setAwayScore] = useState(props.savedPrediction ? String(props.savedPrediction.awayScore) : '');
@@ -159,13 +158,6 @@ export function FixturePredictionCard(props: FixturePredictionCardProps) {
               <span className="text-zinc-300">? - ?</span>
             )}
           </div>
-          {odds && (
-            <div className="mt-1 grid w-full grid-cols-3 gap-1 text-center text-[10px] font-semibold text-brand">
-              <span>{odds.homeWin}</span>
-              <span>{odds.draw}</span>
-              <span>{odds.awayWin}</span>
-            </div>
-          )}
           {(saving || saveState) && editable && <p className="text-[10px] text-zinc-400">{saving ? 'Sauvegarde…' : saveState}</p>}
           {finalScore && <p className="text-[10px] text-zinc-300">Final: {finalScore.homeScore}-{finalScore.awayScore} {typeof points === 'number' ? `• ${points} pts` : ''}</p>}
         </div>
