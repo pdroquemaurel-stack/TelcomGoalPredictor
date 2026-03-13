@@ -3,6 +3,9 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 
+const baseUsername = email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '');
+const username = `${baseUsername}_${Math.random().toString(36).slice(2, 6)}`;
+
 const signupSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
