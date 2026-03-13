@@ -6,7 +6,6 @@ const links = [
   ['/admin/competitions', 'Competitions'],
   ['/admin/challenges', 'Challenges'],
   ['/admin/fixtures', 'Matches'],
-  ['/admin/daily-settings', 'Prono du jour'],
   ['/admin/operations', 'Operations'],
   ['/admin/users', 'Users'],
 ];
