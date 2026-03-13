@@ -37,8 +37,8 @@ async function main() {
 
     await prisma.profile.upsert({
       where: { userId: user.id },
-      update: { displayName: entry.displayName, acceptedTerms: true },
-      create: { userId: user.id, displayName: entry.displayName, acceptedTerms: true },
+      update: { displayName: entry.displayName, acceptedTerms: true, onboardingCompleted: true },
+      create: { userId: user.id, displayName: entry.displayName, acceptedTerms: true, onboardingCompleted: true },
     });
 
     seededUsers.push({ id: user.id, username: user.username });
