@@ -56,7 +56,7 @@ export default async function InvitePage({ params }: { params: { friendCode: str
     <main className="mx-auto max-w-md p-4">
       <section className="card space-y-3">
         <h1 className="text-xl font-black">Invitation ami</h1>
-        <p className="text-sm text-zinc-300">{inviter.profile?.displayName ?? inviter.username} vous invite à rejoindre son cercle d’amis.</p>
+        <p className="text-sm text-zinc-300">{inviter.profile?.displayName ?? inviter.email} vous invite à rejoindre son cercle d’amis.</p>
         {existing?.status === 'ACCEPTED' ? (
           <p className="rounded-xl bg-green-900/30 p-3 text-sm text-green-300">Vous êtes déjà amis ✅</p>
         ) : (

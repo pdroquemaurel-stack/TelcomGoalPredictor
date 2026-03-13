@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import { getServerSession } from 'next-auth';
-import { redirect } from 'next/navigation';
 import { PlayerNav } from '@/components/player-nav';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -13,23 +12,24 @@ type Scope = 'global' | 'country' | 'friends';
 
 export default async function LeaderboardsPage({ searchParams }: { searchParams?: { scope?: string } }) {
   const session = await getServerSession(authOptions);
-  const userId = (session?.user as { id?: string } | undefined)?.id;
-  if (!userId) {
-    redirect('/');
-  }
+  const me = (session?.user as any)?.id as string | undefined;
+  const fallback = await prisma.user.findFirst({ select: { id: true } });
+  const userId = me ?? fallback?.id;
   const scope = (searchParams?.scope as Scope) || 'global';
 
-  const [meProfile, meUser] = await Promise.all([
+  const [meProfile, meUser] = userId ? await Promise.all([
     prisma.profile.findUnique({ where: { userId } }),
     prisma.user.findUnique({ where: { id: userId }, select: { friendCode: true } }),
-  ]);
-  const friendshipLinks = await prisma.friendship.findMany({
+  ]) : [null, null];
+  const friendshipLinks = userId
+    ? await prisma.friendship.findMany({
       where: {
         status: 'ACCEPTED',
         OR: [{ requesterId: userId }, { addresseeId: userId }],
       },
       select: { requesterId: true, addresseeId: true },
-    });
+    })
+    : [];
 
   const friendIds = friendshipLinks.map((link) => (link.requesterId === userId ? link.addresseeId : link.requesterId));
 

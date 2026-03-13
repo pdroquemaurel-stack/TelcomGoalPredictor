@@ -4,8 +4,9 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 
 const signupSchema = z.object({
-  username: z.string().min(3).max(24).regex(/^[a-zA-Z0-9_]+$/),
+  email: z.string().email(),
   password: z.string().min(6),
+  displayName: z.string().min(2).max(30),
 });
 
 function buildFriendCode() {
@@ -17,13 +18,13 @@ export async function POST(req: Request) {
   const parsed = signupSchema.safeParse(json);
 
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Pseudo ou mot de passe invalide.' }, { status: 400 });
+    return NextResponse.json({ error: 'Données invalides.' }, { status: 400 });
   }
 
-  const username = parsed.data.username.toLowerCase();
-  const existing = await prisma.user.findUnique({ where: { username }, select: { id: true } });
+  const email = parsed.data.email.toLowerCase();
+  const existing = await prisma.user.findUnique({ where: { email }, select: { id: true } });
   if (existing) {
-    return NextResponse.json({ error: 'Ce pseudo est déjà pris.' }, { status: 409 });
+    return NextResponse.json({ error: 'Un compte existe déjà pour cet email.' }, { status: 409 });
   }
 
   const passwordHash = await hash(parsed.data.password, 10);
@@ -35,19 +36,21 @@ export async function POST(req: Request) {
     friendCode = buildFriendCode();
   }
 
-  await prisma.user.create({
+  const user = await prisma.user.create({
     data: {
-      username,
+      email,
       passwordHash,
       friendCode,
       profile: {
         create: {
-          displayName: parsed.data.username,
+          displayName: parsed.data.displayName,
           acceptedTerms: true,
+          onboardingCompleted: false,
         },
       },
     },
+    select: { id: true },
   });
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, userId: user.id });
 }
