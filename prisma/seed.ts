@@ -21,18 +21,20 @@ async function main() {
 
   for (const entry of users) {
     const user = await prisma.user.upsert({
-      where: { email: entry.email },
-      update: {
-        role: entry.role,
-        passwordHash: entry.role === UserRole.ADMIN ? adminPassword : playerPassword,
-      },
-      create: {
-        email: entry.email,
-        role: entry.role,
-        friendCode: entry.friendCode,
-        passwordHash: entry.role === UserRole.ADMIN ? adminPassword : playerPassword,
-      },
-    });
+  where: { email: entry.email },
+  update: {
+    username: entry.username,
+    role: entry.role,
+    passwordHash: entry.role === UserRole.ADMIN ? adminPassword : playerPassword,
+  },
+  create: {
+    email: entry.email,
+    username: entry.username,
+    role: entry.role,
+    friendCode: entry.friendCode,
+    passwordHash: entry.role === UserRole.ADMIN ? adminPassword : playerPassword,
+  },
+});
 
     await prisma.profile.upsert({
       where: { userId: user.id },
