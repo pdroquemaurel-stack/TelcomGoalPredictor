@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { PlayerNav } from '@/components/player-nav';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { FriendInviteModal } from '@/components/friend-invite-modal';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -12,9 +13,13 @@ type Scope = 'global' | 'country' | 'friends';
 export default async function LeaderboardsPage({ searchParams }: { searchParams?: { scope?: string } }) {
   const session = await getServerSession(authOptions);
   const me = (session?.user as any)?.id as string | undefined;
-  const fallback = await prisma.user.findFirst({ select: { id: true } });
+  const fallback = await prisma.user.findFirst({ select: { id: true, friendCode: true } });
   const userId = me ?? fallback?.id;
   const scope = (searchParams?.scope as Scope) || 'global';
+
+  const meUser = userId
+    ? await prisma.user.findUnique({ where: { id: userId }, select: { friendCode: true } })
+    : null;
 
   const meProfile = userId ? await prisma.profile.findUnique({ where: { userId } }) : null;
   const friendshipLinks = userId
@@ -51,7 +56,10 @@ export default async function LeaderboardsPage({ searchParams }: { searchParams?
       </header>
 
       <section className="card border-brand bg-brand/10">
-        <h2 className="section-title">Type de classement</h2>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="section-title">Type de classement</h2>
+          {scope === 'friends' && meUser?.friendCode ? <FriendInviteModal friendCode={meUser.friendCode} /> : null}
+        </div>
         <div className="mt-2 grid grid-cols-3 gap-2">
           <Link href="/leaderboards?scope=global" className={`rounded-xl px-3 py-2 text-center text-xs font-black ${scope === 'global' ? 'bg-brand text-black' : 'border border-white/20'}`}>Global</Link>
           <Link href="/leaderboards?scope=country" className={`rounded-xl px-3 py-2 text-center text-xs font-black ${scope === 'country' ? 'bg-brand text-black' : 'border border-white/20'}`}>Pays</Link>
