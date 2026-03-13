@@ -2,18 +2,13 @@ import { hash } from 'bcryptjs';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-
-
+import { buildUniqueFriendCode, buildUniqueUsername } from '@/lib/user-identifiers';
 
 const signupSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
   displayName: z.string().min(2).max(30),
 });
-
-function buildFriendCode() {
-  return `PLY${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
-}
 
 export async function POST(req: Request) {
   const json = await req.json().catch(() => null);
@@ -31,17 +26,14 @@ export async function POST(req: Request) {
 
   const passwordHash = await hash(parsed.data.password, 10);
 
-  let friendCode = buildFriendCode();
+  const baseUsername = email.split('@')[0];
+
   for (let attempt = 0; attempt < 5; attempt += 1) {
-    const used = await prisma.user.findUnique({ where: { friendCode }, select: { id: true } });
-    if (!used) break;
-    friendCode = buildFriendCode();
-  }
+    const username = await buildUniqueUsername(prisma, baseUsername);
+    const friendCode = await buildUniqueFriendCode(prisma);
 
-  const baseUsername = email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '');
-  const username = `${baseUsername}_${Math.random().toString(36).slice(2, 6)}`;
-
-  const user = await prisma.user.create({
+    try {
+      const user = await prisma.user.create({
     data: {
       email,
       username,
@@ -55,8 +47,16 @@ export async function POST(req: Request) {
         },
       },
     },
-    select: { id: true },
-  });
+        select: { id: true },
+      });
 
-  return NextResponse.json({ ok: true, userId: user.id });
+      return NextResponse.json({ ok: true, userId: user.id });
+    } catch (error) {
+      const code = typeof error === 'object' && error !== null && 'code' in error ? (error as { code?: string }).code : undefined;
+      if (code === 'P2002') continue;
+      throw error;
+    }
+  }
+
+  return NextResponse.json({ error: 'Impossible de créer un compte pour le moment.' }, { status: 503 });
 }
