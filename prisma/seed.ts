@@ -10,13 +10,13 @@ async function main() {
   const playerPassword = await hash('Player123!', 10);
 
   const users = [
-    { email: 'admin@demo.com', role: UserRole.ADMIN, friendCode: 'ADMIN001', displayName: 'Demo Admin' },
-    { email: 'player@demo.com', role: UserRole.PLAYER, friendCode: 'PLAY001', displayName: 'Demo Player' },
-    { email: 'amina@demo.com', role: UserRole.PLAYER, friendCode: 'PLAY002', displayName: 'Amina' },
-    { email: 'koffi@demo.com', role: UserRole.PLAYER, friendCode: 'PLAY003', displayName: 'Koffi' },
+    { email: 'admin@demo.com', username: 'admin', role: UserRole.ADMIN, friendCode: 'ADMIN001', displayName: 'Demo Admin' },
+    { email: 'player@demo.com', username: 'player', role: UserRole.PLAYER, friendCode: 'PLAY001', displayName: 'Demo Player' },
+    { email: 'amina@demo.com', username: 'amina', role: UserRole.PLAYER, friendCode: 'PLAY002', displayName: 'Amina' },
+    { email: 'koffi@demo.com', username: 'koffi', role: UserRole.PLAYER, friendCode: 'PLAY003', displayName: 'Koffi' },
   ];
 
-  const seededUsers: Array<{ id: string; email: string }> = [];
+  const seededUsers: Array<{ id: string; username: string }> = [];
 
   for (const entry of users) {
     const user = await prisma.user.upsert({
@@ -24,10 +24,12 @@ async function main() {
       update: {
         role: entry.role,
         passwordHash: entry.role === UserRole.ADMIN ? adminPassword : playerPassword,
+        username: entry.username,
       },
       create: {
         email: entry.email,
         role: entry.role,
+        username: entry.username,
         friendCode: entry.friendCode,
         passwordHash: entry.role === UserRole.ADMIN ? adminPassword : playerPassword,
       },
@@ -39,7 +41,7 @@ async function main() {
       create: { userId: user.id, displayName: entry.displayName, acceptedTerms: true },
     });
 
-    seededUsers.push({ id: user.id, email: user.email });
+    seededUsers.push({ id: user.id, username: user.username });
   }
 
   const competition = await prisma.competition.upsert({
@@ -101,7 +103,7 @@ async function main() {
     createdFixtures.push({ id: row.id, externalId: row.externalId });
   }
 
-  const playerUsers = seededUsers.filter((user) => user.email !== 'admin@demo.com');
+  const playerUsers = seededUsers.filter((user) => user.username !== 'admin');
 
   for (const player of playerUsers) {
     for (const fixture of createdFixtures) {

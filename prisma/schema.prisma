@@ -79,7 +79,8 @@ enum PurchaseStatus {
 
 model User {
   id           String     @id @default(cuid())
-  email        String     @unique
+  email        String?    @unique
+  username     String     @unique
   passwordHash String?
   role         UserRole   @default(PLAYER)
   status       UserStatus @default(ACTIVE)
