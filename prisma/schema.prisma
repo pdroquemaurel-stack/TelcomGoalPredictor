@@ -81,6 +81,7 @@ model User {
   id           String     @id @default(cuid())
   email        String     @unique
   passwordHash String?
+  username     String      @unique
   role         UserRole   @default(PLAYER)
   status       UserStatus @default(ACTIVE)
   friendCode   String     @unique
