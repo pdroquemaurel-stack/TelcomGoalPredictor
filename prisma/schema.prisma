@@ -81,7 +81,6 @@ model User {
   id           String     @id @default(cuid())
   email        String     @unique
   passwordHash String?
-  username     String      @unique
   role         UserRole   @default(PLAYER)
   status       UserStatus @default(ACTIVE)
   friendCode   String     @unique
@@ -178,7 +177,6 @@ model Profile {
   qrCodeData           String?
   countryId            String?
   cityId               String?
-  onboardingCompleted  Boolean @default(false)
 
   user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   country Country? @relation(fields: [countryId], references: [id])
@@ -430,15 +428,6 @@ model UserBadge {
   badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
 
   @@unique([userId, badgeId])
-}
-
-
-model AppSetting {
-  id        String   @id @default(cuid())
-  key       String   @unique
-  value     String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 model ThemeConfig {

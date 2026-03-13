@@ -1,19 +1,16 @@
-import { AdminDailyWindowSetting } from '@/components/admin-daily-window-setting';
-import { getUpcomingDaysSetting } from '@/lib/services/app-settings';
 import { prisma } from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default async function AdminDashboardPage() {
-  const [users, predictions, fixtures, competitions, dailyCompetitions, activeChallenges, upcomingDays] = await Promise.all([
+  const [users, predictions, fixtures, competitions, dailyCompetitions, activeChallenges] = await Promise.all([
     prisma.user.count(),
     prisma.prediction.count(),
     prisma.fixture.count(),
     prisma.competition.count({ where: { active: true } }),
     prisma.competition.count({ where: { isDailyEnabled: true, active: true } }),
     prisma.challenge.count({ where: { isActive: true } }),
-    getUpcomingDaysSetting(),
   ]);
 
   return (
@@ -28,8 +25,6 @@ export default async function AdminDashboardPage() {
         <div className="rounded-2xl bg-white p-4"><p className="text-xs uppercase text-slate-500">Predictions</p><p className="mt-1 text-2xl font-bold">{predictions}</p></div>
         <div className="rounded-2xl bg-white p-4"><p className="text-xs uppercase text-slate-500">Active challenges</p><p className="mt-1 text-2xl font-bold">{activeChallenges}</p></div>
       </div>
-
-      <AdminDailyWindowSetting initialDays={upcomingDays} />
     </div>
   );
 }
