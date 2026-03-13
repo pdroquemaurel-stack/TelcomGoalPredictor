@@ -61,6 +61,9 @@ export default async function LeaderboardsPage({ searchParams }: { searchParams?
           <Link href="/leaderboards?scope=country" className={`rounded-xl px-3 py-2 text-center text-xs font-black ${scope === 'country' ? 'bg-brand text-black' : 'border border-white/20'}`}>Pays</Link>
           <Link href="/leaderboards?scope=friends" className={`rounded-xl px-3 py-2 text-center text-xs font-black ${scope === 'friends' ? 'bg-brand text-black' : 'border border-white/20'}`}>Amis</Link>
         </div>
+        {scope === 'country' && (
+          <p className="text-xs text-zinc-300">Classement pays basé sur le pays enregistré dans votre profil.</p>
+        )}
         {scope === 'friends' && meUser?.friendCode && (
           <div className="pt-1">
             <InviteFriendModal defaultAppUrl={process.env.NEXT_PUBLIC_APP_URL} friendCode={meUser.friendCode} />

@@ -10,10 +10,10 @@ async function main() {
   const playerPassword = await hash('Player123!', 10);
 
   const users = [
-    { email: 'admin@demo.com', role: UserRole.ADMIN, friendCode: 'ADMIN001', displayName: 'Demo Admin' },
-    { email: 'player@demo.com', role: UserRole.PLAYER, friendCode: 'PLAY001', displayName: 'Demo Player' },
-    { email: 'amina@demo.com', role: UserRole.PLAYER, friendCode: 'PLAY002', displayName: 'Amina' },
-    { email: 'koffi@demo.com', role: UserRole.PLAYER, friendCode: 'PLAY003', displayName: 'Koffi' },
+    { username: 'admin', email: 'admin@demo.com', role: UserRole.ADMIN, friendCode: 'ADMIN001', displayName: 'Demo Admin' },
+    { username: 'player', email: 'player@demo.com', role: UserRole.PLAYER, friendCode: 'PLAY001', displayName: 'Demo Player' },
+    { username: 'amina', email: 'amina@demo.com', role: UserRole.PLAYER, friendCode: 'PLAY002', displayName: 'Amina' },
+    { username: 'koffi', email: 'koffi@demo.com', role: UserRole.PLAYER, friendCode: 'PLAY003', displayName: 'Koffi' },
   ];
 
   const seededUsers: Array<{ id: string; email: string }> = [];
@@ -22,10 +22,12 @@ async function main() {
     const user = await prisma.user.upsert({
       where: { email: entry.email },
       update: {
+        username: entry.username,
         role: entry.role,
         passwordHash: entry.role === UserRole.ADMIN ? adminPassword : playerPassword,
       },
       create: {
+        username: entry.username,
         email: entry.email,
         role: entry.role,
         friendCode: entry.friendCode,
@@ -121,7 +123,7 @@ async function main() {
 
   await settleFinishedFixtures(prisma);
 
-  console.log('Seed complete. Admin: admin@demo.com / Admin123! | Player: player@demo.com / Player123!');
+  console.log('Seed complete. Admin: admin / Admin123! | Player: player / Player123!');
 }
 
 main().finally(async () => {

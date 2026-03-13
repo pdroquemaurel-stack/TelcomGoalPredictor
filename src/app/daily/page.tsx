@@ -1,24 +1,39 @@
 import Link from 'next/link';
 import { getServerSession } from 'next-auth';
+import { redirect } from 'next/navigation';
 import { PlayerNav } from '@/components/player-nav';
 import { FixturePredictionCard } from '@/components/fixture-prediction-card';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { formatMatchDateTime } from '@/lib/date-format';
+import { AFRICAN_COUNTRIES } from '@/lib/countries';
+import { OnboardingModal } from '@/components/onboarding-modal';
 import { getDailyFixturesForUser } from '@/lib/services/daily-service';
 
 export const dynamic = 'force-dynamic';
 
 export default async function DailyPage({ searchParams }: { searchParams?: { view?: string } }) {
   const session = await getServerSession(authOptions);
-  const me = (session?.user as any)?.id as string | undefined;
-  const fallbackUser = await prisma.user.findFirst({ select: { id: true } });
-  const userId = me ?? fallbackUser?.id ?? '';
-  const daily = await getDailyFixturesForUser(userId);
+  const userId = (session?.user as any)?.id as string | undefined;
+
+  if (!userId) {
+    redirect('/');
+  }
+  const [daily, profile] = await Promise.all([
+    getDailyFixturesForUser(userId),
+    userId ? prisma.profile.findUnique({ where: { userId }, include: { country: true } }) : null,
+  ]);
   const showPast = searchParams?.view === 'past';
 
   return (
     <main className="mx-auto max-w-md space-y-4 px-4 pb-28 pt-5">
+      {!profile?.countryId && userId && (
+        <OnboardingModal
+          countries={AFRICAN_COUNTRIES}
+          defaultCountryCode={undefined}
+          displayName={profile?.displayName ?? session?.user?.name ?? 'Joueur'}
+        />
+      )}
       <header className="rounded-3xl bg-brand p-5 text-black">
         <p className="text-xs font-black uppercase tracking-[0.18em]">Prono du jour</p>
         <h1 className="mt-1 text-2xl font-black">Matchs des {daily.upcomingDays} prochains jours</h1>

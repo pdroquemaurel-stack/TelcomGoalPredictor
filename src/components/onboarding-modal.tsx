@@ -47,9 +47,9 @@ export function OnboardingModal({ countries, defaultCountryCode, displayName }: 
   return (
     <div className="fixed inset-0 z-50 flex items-end bg-black/70 p-3 md:items-center md:justify-center">
       <div className="w-full rounded-3xl border border-white/10 bg-zinc-950 p-5 shadow-2xl md:max-w-md">
-        <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-300">Bienvenue</p>
+        <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-300">Profil incomplet</p>
         <h2 className="mt-1 text-2xl font-black">Salut {displayName} 👋</h2>
-        <p className="mt-2 text-sm text-zinc-200">Prédisez les matchs, gagnez des points et montez dans le leaderboard.</p>
+        <p className="mt-2 text-sm text-zinc-200">Choisissez votre pays pour accéder au classement national.</p>
 
         <div className="mt-4">
           <label className="text-xs font-black uppercase tracking-[0.12em] text-zinc-300" htmlFor="country-search">
@@ -84,7 +84,7 @@ export function OnboardingModal({ countries, defaultCountryCode, displayName }: 
         </div>
 
         <button className="cta-primary mt-4 w-full disabled:opacity-50" disabled={!selectedCode || pending} onClick={handleFinish} type="button">
-          {pending ? 'Enregistrement...' : 'Terminer'}
+          {pending ? 'Enregistrement...' : 'Commencer à parier'}
         </button>
       </div>
     </div>
