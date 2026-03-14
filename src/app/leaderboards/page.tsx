@@ -1,8 +1,7 @@
 import Link from 'next/link';
-import { getServerSession } from 'next-auth';
 import { PlayerNav } from '@/components/player-nav';
-import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { requireAuthenticatedUser } from '@/lib/session-user';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -10,10 +9,8 @@ export const revalidate = 0;
 type Scope = 'global' | 'country' | 'friends';
 
 export default async function LeaderboardsPage({ searchParams }: { searchParams?: { scope?: string } }) {
-  const session = await getServerSession(authOptions);
-  const me = (session?.user as any)?.id as string | undefined;
-  const fallback = await prisma.user.findFirst({ select: { id: true } });
-  const userId = me ?? fallback?.id;
+  const me = await requireAuthenticatedUser();
+  const userId = me.id;
   const scope = (searchParams?.scope as Scope) || 'global';
 
   const meProfile = userId ? await prisma.profile.findUnique({ where: { userId } }) : null;

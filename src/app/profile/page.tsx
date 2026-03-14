@@ -1,28 +1,22 @@
 import Link from 'next/link';
-import { getServerSession } from 'next-auth';
 import { PlayerNav } from '@/components/player-nav';
-import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { requireAuthenticatedUser } from '@/lib/session-user';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default async function ProfilePage() {
-  const session = await getServerSession(authOptions);
-  const me = (session?.user as any)?.id as string | undefined;
-  const fallback = await prisma.user.findFirst({ select: { id: true } });
-  const userId = me ?? fallback?.id;
+  const me = await requireAuthenticatedUser();
 
-  const profile = userId
-    ? await prisma.profile.findUnique({ where: { userId }, include: { user: true } })
-    : null;
+  const profile = await prisma.profile.findUnique({ where: { userId: me.id }, include: { user: true } });
 
   return (
     <main className="mx-auto max-w-md space-y-4 px-4 pb-28 pt-5">
       <header className="rounded-3xl bg-white p-5 text-black shadow-xl">
         <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-600">Profil</p>
         <h1 className="mt-1 text-3xl font-black">{profile?.displayName ?? 'Player'}</h1>
-        <p className="mt-1 text-sm font-semibold">{profile?.user.email ?? 'demo@player.com'}</p>
+        <p className="mt-1 text-sm font-semibold">{profile?.user.username ?? 'player'}</p>
       </header>
 
       <section className="card">

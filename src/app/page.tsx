@@ -1,10 +1,8 @@
-import { getServerSession } from 'next-auth';
 import { PlayerNav } from '@/components/player-nav';
-import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { getDailyFixturesForUser } from '@/lib/services/daily-service';
 import { getActiveChallengesFilter } from '@/lib/services/challenge-service';
-import { formatMatchDateTime } from '@/lib/date-format';
+import { requireAuthenticatedUser } from '@/lib/session-user';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -14,18 +12,16 @@ function getInitials(value: string) {
 }
 
 export default async function HomePage() {
-  const session = await getServerSession(authOptions);
-  const me = (session?.user as any)?.id as string | undefined;
-  const fallbackUser = await prisma.user.findFirst({ select: { id: true, email: true } });
-  const userId = me ?? fallbackUser?.id ?? '';
+  const me = await requireAuthenticatedUser();
+  const userId = me.id;
 
   const [profile, daily, availableChallenges] = await Promise.all([
-    userId ? prisma.profile.findUnique({ where: { userId } }) : null,
+    prisma.profile.findUnique({ where: { userId } }),
     getDailyFixturesForUser(userId),
     prisma.challenge.count({ where: getActiveChallengesFilter() }),
   ]);
 
-  const displayName = profile?.displayName ?? fallbackUser?.email ?? 'Joueur';
+  const displayName = profile?.displayName ?? 'Joueur';
   const dailyFixtures = daily.today;
   const completedToday = dailyFixtures.filter((fixture) => fixture.savedPrediction).length;
   const totalToday = dailyFixtures.length;

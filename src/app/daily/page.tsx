@@ -1,18 +1,13 @@
-import { getServerSession } from 'next-auth';
 import { PlayerNav } from '@/components/player-nav';
 import { FixturePredictionCard } from '@/components/fixture-prediction-card';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
 import { getDailyFixturesForUser } from '@/lib/services/daily-service';
+import { requireAuthenticatedUser } from '@/lib/session-user';
 
 export const dynamic = 'force-dynamic';
 
 export default async function DailyPage() {
-  const session = await getServerSession(authOptions);
-  const me = (session?.user as any)?.id as string | undefined;
-  const fallbackUser = await prisma.user.findFirst({ select: { id: true } });
-  const userId = me ?? fallbackUser?.id ?? '';
-  const daily = await getDailyFixturesForUser(userId);
+  const me = await requireAuthenticatedUser();
+  const daily = await getDailyFixturesForUser(me.id);
 
   return (
     <main className="mx-auto max-w-md space-y-4 px-4 pb-28 pt-5">

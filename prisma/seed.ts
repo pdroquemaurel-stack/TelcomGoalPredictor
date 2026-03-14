@@ -18,32 +18,31 @@ async function resolveAvailableFriendCode(baseCode: string) {
 }
 
 async function main() {
-  const adminPassword = await hash('Admin123!', 10);
-  const playerPassword = await hash('Player123!', 10);
-
   const users = [
-    { email: 'admin@demo.com', role: UserRole.ADMIN, friendCode: 'ADMIN001', displayName: 'Demo Admin' },
-    { email: 'player@demo.com', role: UserRole.PLAYER, friendCode: 'PLAY001', displayName: 'Demo Player' },
-    { email: 'amina@demo.com', role: UserRole.PLAYER, friendCode: 'PLAY002', displayName: 'Amina' },
-    { email: 'koffi@demo.com', role: UserRole.PLAYER, friendCode: 'PLAY003', displayName: 'Koffi' },
+    { username: 'admin', password: 'admin', role: UserRole.ADMIN, friendCode: 'ADMIN001', displayName: 'Demo Admin' },
+    { username: 'joueur1', password: 'joueur1', role: UserRole.PLAYER, friendCode: 'PLAY001', displayName: 'Joueur 1' },
+    { username: 'joueur2', password: 'joueur2', role: UserRole.PLAYER, friendCode: 'PLAY002', displayName: 'Joueur 2' },
+    { username: 'player', password: 'player', role: UserRole.PLAYER, friendCode: 'PLAY003', displayName: 'Demo Player' },
   ];
 
-  const seededUsers: Array<{ id: string; email: string }> = [];
+  const seededUsers: Array<{ id: string; username: string }> = [];
 
   for (const entry of users) {
-    const existingByEmail = await prisma.user.findUnique({ where: { email: entry.email }, select: { id: true } });
+    const passwordHash = await hash(entry.password, 10);
+    const existingByUsername = await prisma.user.findUnique({ where: { username: entry.username }, select: { id: true } });
 
     const user = await prisma.user.upsert({
-      where: { email: entry.email },
+      where: { username: entry.username },
       update: {
         role: entry.role,
-        passwordHash: entry.role === UserRole.ADMIN ? adminPassword : playerPassword,
+        passwordHash,
       },
       create: {
-        email: entry.email,
+        username: entry.username,
+        email: `${entry.username}@demo.local`,
         role: entry.role,
-        friendCode: existingByEmail ? entry.friendCode : await resolveAvailableFriendCode(entry.friendCode),
-        passwordHash: entry.role === UserRole.ADMIN ? adminPassword : playerPassword,
+        friendCode: existingByUsername ? entry.friendCode : await resolveAvailableFriendCode(entry.friendCode),
+        passwordHash,
       },
     });
 
@@ -53,7 +52,7 @@ async function main() {
       create: { userId: user.id, displayName: entry.displayName, acceptedTerms: true },
     });
 
-    seededUsers.push({ id: user.id, email: user.email });
+    seededUsers.push({ id: user.id, username: user.username });
   }
 
   const competition = await prisma.competition.upsert({
@@ -115,7 +114,7 @@ async function main() {
     createdFixtures.push({ id: row.id, externalId: row.externalId });
   }
 
-  const playerUsers = seededUsers.filter((user) => user.email !== 'admin@demo.com');
+  const playerUsers = seededUsers.filter((user) => user.username !== 'admin');
 
   for (const player of playerUsers) {
     for (const fixture of createdFixtures) {
@@ -135,7 +134,7 @@ async function main() {
 
   await settleFinishedFixtures(prisma);
 
-  console.log('Seed complete. Admin: admin@demo.com / Admin123! | Player: player@demo.com / Player123!');
+  console.log('Seed complete. Admin: admin / admin | Players: joueur1 / joueur1, joueur2 / joueur2');
 }
 
 main()

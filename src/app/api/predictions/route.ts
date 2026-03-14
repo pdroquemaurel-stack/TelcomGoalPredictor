@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { apiError, apiSuccess } from '@/lib/api';
 import { canSubmitPrediction } from '@/lib/services/prediction-rules';
+import { getSessionUserId } from '@/lib/auth-session';
+
 
 const schema = z.object({
   fixtureId: z.string().min(1),
@@ -14,7 +16,7 @@ const schema = z.object({
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
-    const userId = (session?.user as any)?.id as string | undefined;
+    const userId = getSessionUserId(session);
     if (!userId) return apiError('UNAUTHORIZED', 'Authentication required.', 401);
 
     const parsed = schema.safeParse(await req.json());
