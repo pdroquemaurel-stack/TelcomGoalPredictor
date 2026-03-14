@@ -125,7 +125,7 @@ export async function getChallengeLeaderboard(challengeId: string) {
   return buildChallengeLeaderboard(
     predictions.map((prediction) => ({
       userId: prediction.userId,
-      displayName: prediction.user.profile?.displayName ?? prediction.user.email,
+      displayName: prediction.user.profile?.displayName ?? prediction.user.username,
       predictedHome: prediction.homeScore,
       predictedAway: prediction.awayScore,
       finalHome: prediction.fixture.homeScore,

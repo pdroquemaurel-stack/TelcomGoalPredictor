@@ -1,20 +1,15 @@
 import { notFound } from 'next/navigation';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
 import { getChallengeDetailBySlug, getChallengeLeaderboard } from '@/lib/services/challenge-service';
 import { PlayerNav } from '@/components/player-nav';
 import { FixturePredictionCard } from '@/components/fixture-prediction-card';
+import { requireAuthenticatedUser } from '@/lib/session-user';
 
 export const dynamic = 'force-dynamic';
 
 export default async function ChallengeDetailPage({ params }: { params: { slug: string } }) {
-  const session = await getServerSession(authOptions);
-  const me = (session?.user as any)?.id as string | undefined;
-  const fallbackUser = await prisma.user.findFirst({ select: { id: true } });
-  const userId = me ?? fallbackUser?.id ?? '';
+  const me = await requireAuthenticatedUser();
 
-  const challenge = await getChallengeDetailBySlug(params.slug, userId);
+  const challenge = await getChallengeDetailBySlug(params.slug, me.id);
   if (!challenge) notFound();
 
   const leaderboard = await getChallengeLeaderboard(challenge.id);
