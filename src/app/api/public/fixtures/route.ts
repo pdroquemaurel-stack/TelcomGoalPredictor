@@ -8,10 +8,7 @@ import { calculateMatchOdds, filterOutCurrentUserPredictions, type ScorePredicti
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const competitionId = searchParams.get('competitionId');
-
+export async function GET() {
   const user = await getAuthenticatedUser();
   const playerId = user?.id ?? '__anonymous__';
 
@@ -26,17 +23,22 @@ export async function GET(req: Request) {
     },
   });
 
-  const activeCompetitionId = competitionId ?? competitions[0]?.id;
-
   const fixtures = await prisma.fixture.findMany({
-    where: { predictionEnabled: true, visible: true, competitionId: activeCompetitionId },
+    where: {
+      predictionEnabled: true,
+      visible: true,
+      competition: {
+        visible: true,
+        active: true,
+      },
+    },
     include: {
       homeTeam: true,
       awayTeam: true,
       competition: true,
       predictions: { where: { userId: playerId }, take: 1 },
     },
-    orderBy: [{ utcKickoff: 'asc' }],
+    orderBy: [{ competition: { displayOrder: 'asc' } }, { utcKickoff: 'asc' }],
     take: 300,
   });
 
@@ -76,7 +78,6 @@ export async function GET(req: Request) {
         remainingMatches: Math.max(total - predicted, 0),
       };
     }),
-    activeCompetitionId,
     fixtures: fixtures.map((fixture) => {
       const savedPrediction = fixture.predictions[0] ?? null;
       const isResolved = fixture.fixtureState === FixtureState.SETTLED;
@@ -90,6 +91,7 @@ export async function GET(req: Request) {
       return {
         id: fixture.id,
         competitionId: fixture.competitionId,
+        fixtureState: fixture.fixtureState,
         home: fixture.homeTeam.name,
         homeLogoUrl: getTeamLogoUrl(fixture.homeTeam),
         away: fixture.awayTeam.name,
