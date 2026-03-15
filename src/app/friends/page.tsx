@@ -1,4 +1,7 @@
-export default function FriendsPage() {
+import { requireOnboardedUser } from '@/lib/player-access';
+
+export default async function FriendsPage() {
+  await requireOnboardedUser();
   return (
     <main className="mx-auto max-w-md space-y-4 p-4">
       <h1 className="text-2xl font-black">Friends</h1>

@@ -1,72 +1,78 @@
-import { getServerSession } from 'next-auth';
+import Link from 'next/link';
 import { PlayerNav } from '@/components/player-nav';
-import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { getDailyFixturesForUser } from '@/lib/services/daily-service';
 import { getActiveChallengesFilter } from '@/lib/services/challenge-service';
+import { requireOnboardedUser } from '@/lib/player-access';
 import { formatMatchDateTime } from '@/lib/date-format';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-function getInitials(value: string) {
-  return value.split(' ').filter(Boolean).slice(0, 2).map((item) => item[0]?.toUpperCase() ?? '').join('') || 'J';
+function getFirstName(value: string) {
+  return value.split(' ').filter(Boolean)[0] ?? 'Joueur';
 }
 
 export default async function HomePage() {
-  const session = await getServerSession(authOptions);
-  const me = (session?.user as any)?.id as string | undefined;
-  const fallbackUser = await prisma.user.findFirst({ select: { id: true, email: true } });
-  const userId = me ?? fallbackUser?.id ?? '';
+  const { me, profile } = await requireOnboardedUser();
+  const userId = me.id;
 
-  const [profile, daily, availableChallenges] = await Promise.all([
-    userId ? prisma.profile.findUnique({ where: { userId } }) : null,
+  const [daily, availableChallenges] = await Promise.all([
     getDailyFixturesForUser(userId),
     prisma.challenge.count({ where: getActiveChallengesFilter() }),
   ]);
 
-  const displayName = profile?.displayName ?? fallbackUser?.email ?? 'Joueur';
   const dailyFixtures = daily.today;
   const completedToday = dailyFixtures.filter((fixture) => fixture.savedPrediction).length;
   const totalToday = dailyFixtures.length;
-
-  const ratio = profile?.totalPredictions
-    ? Math.round((profile.exactHits / profile.totalPredictions) * 100)
-    : Math.round(profile?.accuracyPct ?? 0);
+  const nextFixture = dailyFixtures.find((fixture) => !fixture.savedPrediction) ?? dailyFixtures[0] ?? null;
+  const hasOpen = totalToday > 0;
 
   return (
     <main className="mx-auto max-w-md space-y-4 px-4 pb-28 pt-5">
       <header className="card border-brand bg-brand/10">
-        <div className="flex items-center gap-3">
-          <span className="inline-flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border border-white/20 bg-white text-lg font-black text-black">
-            {profile?.avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img alt="Avatar joueur" className="h-14 w-14 rounded-full object-cover" src={profile.avatarUrl} />
-            ) : (
-              getInitials(displayName)
-            )}
-          </span>
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-300">Joueur</p>
-            <h1 className="text-xl font-black">{displayName}</h1>
-          </div>
-        </div>
+        <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-300">Bienvenue</p>
+        <h1 className="mt-1 text-2xl font-black">Salut {getFirstName(profile.displayName)} 👋</h1>
+        <p className="mt-2 text-sm text-zinc-200">Prêt à grimper au classement aujourd’hui ?</p>
       </header>
 
       <section className="card">
-        <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-300">Ratio de victoire</p>
-        <p className="mt-1 text-3xl font-black text-brand">{ratio}%</p>
+        <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-300">Progression</p>
+        <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+          <div className="rounded-2xl border border-white/10 bg-zinc-900 p-3">
+            <p className="text-lg font-black text-brand">{profile.totalPoints}</p>
+            <p className="text-[11px] text-zinc-300">Points</p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-zinc-900 p-3">
+            <p className="text-lg font-black">{completedToday}/{totalToday}</p>
+            <p className="text-[11px] text-zinc-300">Pronos du jour</p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-zinc-900 p-3">
+            <p className="text-lg font-black">{Math.round(profile.accuracyPct)}%</p>
+            <p className="text-[11px] text-zinc-300">Précision</p>
+          </div>
+        </div>
       </section>
 
       <section className="card">
-        <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-300">Challenges du jour</p>
-        <p className="mt-1 text-2xl font-black">{completedToday} / {totalToday}</p>
-        <p className="text-xs text-zinc-300">remplis / à remplir</p>
+        <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-300">Prochaine échéance</p>
+        {nextFixture ? (
+          <>
+            <p className="mt-2 text-base font-black">{nextFixture.home} vs {nextFixture.away}</p>
+            <p className="text-xs text-zinc-300">{formatMatchDateTime(nextFixture.kickoff)} • {nextFixture.competition}</p>
+          </>
+        ) : (
+          <p className="mt-2 text-sm text-zinc-300">Aucun match ouvert pour le moment. Reviens bientôt.</p>
+        )}
+        <Link href="/predictions" className="cta-primary mt-4 block w-full text-center">
+          Pronostiquer maintenant
+        </Link>
       </section>
 
       <section className="card">
-        <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-300">Challenges disponibles</p>
-        <p className="mt-1 text-2xl font-black">{availableChallenges}</p>
+        <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-300">Compétitions & challenges</p>
+        <p className="mt-2 text-sm text-zinc-100">{availableChallenges} challenge(s) actif(s)</p>
+        <p className="text-xs text-zinc-300">{hasOpen ? 'Des matchs sont disponibles aujourd’hui.' : 'Pas de match ouvert actuellement.'}</p>
       </section>
 
       <PlayerNav />

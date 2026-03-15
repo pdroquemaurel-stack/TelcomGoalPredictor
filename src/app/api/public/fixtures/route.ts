@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { FixtureState } from '@prisma/client';
-import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { getAuthenticatedUser } from '@/lib/session-user';
 import { getTeamLogoUrl } from '@/lib/team-logo';
 
 export const dynamic = 'force-dynamic';
@@ -12,10 +11,8 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const competitionId = searchParams.get('competitionId');
 
-  const session = await getServerSession(authOptions);
-  const userId = (session?.user as any)?.id as string | undefined;
-  const fallbackUser = await prisma.user.findFirst({ select: { id: true } });
-  const playerId = userId ?? fallbackUser?.id ?? '';
+  const user = await getAuthenticatedUser();
+  const playerId = user?.id ?? '__anonymous__';
 
   const competitions = await prisma.competition.findMany({
     where: { visible: true, active: true },
