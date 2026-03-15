@@ -19,6 +19,7 @@ type Fixture = {
   points: number;
   savedPrediction: { homeScore: number; awayScore: number } | null;
   finalScore: { homeScore: number; awayScore: number } | null;
+  odds: { homeWin: number; draw: number; awayWin: number };
 };
 
 type Competition = {
@@ -137,6 +138,8 @@ export function PredictionsClient() {
                   kickoff={fixture.kickoff}
                   points={fixture.points}
                   savedPrediction={fixture.savedPrediction}
+                  odds={fixture.odds}
+                  isLocked={fixture.state === 'locked'}
                 />
               );
             })}
