@@ -3,6 +3,7 @@ import { FixtureState } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getAuthenticatedUser } from '@/lib/session-user';
 import { getTeamLogoUrl } from '@/lib/team-logo';
+import { calculateMatchOdds, filterOutCurrentUserPredictions, type ScorePrediction } from '@/lib/prediction-odds';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -37,6 +38,29 @@ export async function GET(req: Request) {
     },
     orderBy: [{ utcKickoff: 'asc' }],
     take: 300,
+  });
+
+  const fixtureIds = fixtures.map((fixture) => fixture.id);
+  const predictionsByFixture = fixtureIds.length
+    ? await prisma.prediction.findMany({
+      where: {
+        fixtureId: { in: fixtureIds },
+      },
+      select: {
+        fixtureId: true,
+        userId: true,
+        homeScore: true,
+        awayScore: true,
+      },
+    })
+    : [];
+
+  const predictionsByFixtureId = new Map<string, ScorePrediction[]>();
+  const marketPredictions = filterOutCurrentUserPredictions(predictionsByFixture, playerId);
+  marketPredictions.forEach((prediction) => {
+    const current = predictionsByFixtureId.get(prediction.fixtureId) ?? [];
+    current.push({ homeScore: prediction.homeScore, awayScore: prediction.awayScore });
+    predictionsByFixtureId.set(prediction.fixtureId, current);
   });
 
   return NextResponse.json({
@@ -74,6 +98,7 @@ export async function GET(req: Request) {
         competition: fixture.competition?.name ?? 'League Match',
         state,
         points: savedPrediction?.pointsAwarded ?? 0,
+        odds: calculateMatchOdds(predictionsByFixtureId.get(fixture.id) ?? []),
         savedPrediction: savedPrediction
           ? { homeScore: savedPrediction.homeScore, awayScore: savedPrediction.awayScore }
           : null,
