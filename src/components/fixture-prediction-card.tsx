@@ -31,6 +31,13 @@ const DEFAULT_ODDS = {
   awayWin: 3,
 };
 
+function getDisplayOdds(odds?: { homeWin: number; draw: number; awayWin: number }) {
+  if (!odds) return DEFAULT_ODDS;
+
+  const hasInvalidValue = [odds.homeWin, odds.draw, odds.awayWin].some((value) => !Number.isFinite(value) || value <= 0);
+  return hasInvalidValue ? DEFAULT_ODDS : odds;
+}
+
 function TeamAvatar({ name, logoUrl }: { name: string; logoUrl: string }) {
   const initials = getTeamInitials(name);
   return (
@@ -82,7 +89,7 @@ export function FixturePredictionCard(props: FixturePredictionCardProps) {
     onSaved,
     finalScore,
     points,
-    odds = DEFAULT_ODDS,
+    odds,
     isLocked = false,
   } = props;
   const [prediction, setPrediction] = useState<Prediction>(props.savedPrediction);
@@ -103,13 +110,15 @@ export function FixturePredictionCard(props: FixturePredictionCardProps) {
     : null;
   const inputColors = getPredictionScoreColorClasses(livePrediction);
   const lockVisualState = getFixtureLockVisualState(isLocked);
+  const canEditPrediction = editable && !isLocked && !finalScore;
+  const displayOdds = getDisplayOdds(odds);
 
   useEffect(() => () => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
   }, []);
 
   useEffect(() => {
-    if (!editable) return;
+    if (!canEditPrediction) return;
     const homeValue = toScoreValue(homeScore);
     const awayValue = toScoreValue(awayScore);
     if (homeValue === null || awayValue === null) return;
@@ -143,7 +152,7 @@ export function FixturePredictionCard(props: FixturePredictionCardProps) {
       onSaved?.(nextPrediction);
       setSaving(false);
     }, 300);
-  }, [awayScore, editable, fixtureId, homeScore, onSaved]);
+  }, [awayScore, canEditPrediction, fixtureId, homeScore, onSaved]);
 
   const handleHomeChange = (value: string) => {
     const sanitized = value.replace(/\D/g, '').slice(0, 2);
@@ -174,7 +183,7 @@ export function FixturePredictionCard(props: FixturePredictionCardProps) {
 
           <div className="flex flex-col items-center gap-1">
             <div className="flex items-center gap-1 rounded-xl border border-white/15 bg-zinc-900 px-2 py-1">
-              {editable ? (
+              {canEditPrediction ? (
                 <>
                   <input
                     className={`h-9 w-10 rounded-lg border border-white/20 bg-black text-center text-base font-black ${inputColors.home}`}
@@ -205,12 +214,12 @@ export function FixturePredictionCard(props: FixturePredictionCardProps) {
             </div>
 
             <div className="mt-1 grid w-full grid-cols-3 gap-1 rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-center text-[10px] font-bold text-zinc-200">
-              <span>1: {odds.homeWin.toFixed(2)}</span>
-              <span>N: {odds.draw.toFixed(2)}</span>
-              <span>2: {odds.awayWin.toFixed(2)}</span>
+              <span>1: {displayOdds.homeWin.toFixed(2)}</span>
+              <span>N: {displayOdds.draw.toFixed(2)}</span>
+              <span>2: {displayOdds.awayWin.toFixed(2)}</span>
             </div>
 
-            {(saving || saveState) && editable && <p className="text-[10px] text-zinc-400">{saving ? 'Sauvegarde…' : saveState}</p>}
+            {(saving || saveState) && canEditPrediction && <p className="text-[10px] text-zinc-400">{saving ? 'Sauvegarde…' : saveState}</p>}
             {finalScore && <p className="text-[10px] text-zinc-300">Final: {finalScore.homeScore}-{finalScore.awayScore} {typeof points === 'number' ? `• ${points} pts` : ''}</p>}
           </div>
 

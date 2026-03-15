@@ -32,6 +32,18 @@ test('calculateMatchOdds lowers odds on majority outcome and raises alternatives
   assert.ok(odds.awayWin > odds.homeWin);
 });
 
+test('calculateMatchOdds lowers draw odds when draw predictions dominate', () => {
+  const odds = calculateMatchOdds([
+    { homeScore: 1, awayScore: 1 },
+    { homeScore: 0, awayScore: 0 },
+    { homeScore: 2, awayScore: 2 },
+    { homeScore: 2, awayScore: 1 },
+  ]);
+
+  assert.ok(odds.draw < odds.homeWin);
+  assert.ok(odds.draw < odds.awayWin);
+});
+
 test('filterOutCurrentUserPredictions excludes connected user prediction from odds market', () => {
   const predictions = [
     { userId: 'u1', homeScore: 2, awayScore: 0 },
