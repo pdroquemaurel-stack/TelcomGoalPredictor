@@ -1,4 +1,7 @@
-export default function ShopPage() {
+import { requireOnboardedUser } from '@/lib/player-access';
+
+export default async function ShopPage() {
+  await requireOnboardedUser();
   return (
     <main className="mx-auto max-w-md space-y-4 p-4">
       <h1 className="text-2xl font-black">Bonus Shop</h1>

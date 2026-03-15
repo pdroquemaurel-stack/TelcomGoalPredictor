@@ -1,3 +1,4 @@
+import { requireOnboardedUser } from '@/lib/player-access';
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import { getActiveChallengesFilter } from '@/lib/services/challenge-service';
@@ -6,6 +7,7 @@ import { PlayerNav } from '@/components/player-nav';
 export const dynamic = 'force-dynamic';
 
 export default async function ChallengesPage() {
+  await requireOnboardedUser();
   const challenges = await prisma.challenge.findMany({
     where: getActiveChallengesFilter(),
     include: { competitions: { include: { competition: true } }, _count: { select: { fixtures: true } } },
