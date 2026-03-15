@@ -1,12 +1,12 @@
 import { PlayerNav } from '@/components/player-nav';
 import { FixturePredictionCard } from '@/components/fixture-prediction-card';
 import { getDailyFixturesForUser } from '@/lib/services/daily-service';
-import { requireAuthenticatedUser } from '@/lib/session-user';
+import { requireOnboardedUser } from '@/lib/player-access';
 
 export const dynamic = 'force-dynamic';
 
 export default async function DailyPage() {
-  const me = await requireAuthenticatedUser();
+  const { me } = await requireOnboardedUser();
   const daily = await getDailyFixturesForUser(me.id);
 
   return (
