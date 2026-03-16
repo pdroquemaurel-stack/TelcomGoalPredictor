@@ -4,8 +4,11 @@ import { syncCompetitions, syncFixtures } from '@/lib/sync';
 import { settleFinishedFixtures } from '@/lib/services/settlement-service';
 import { apiError, apiSuccess } from '@/lib/api';
 import { buildAdminSyncWindow } from '@/lib/admin-sync-window';
+import { type AdminSyncStep, formatAdminSyncError, validateAdminSyncConfig } from '@/lib/admin-sync-diagnostics';
 
 export async function POST() {
+  let currentStep: AdminSyncStep = 'auth';
+
   try {
     const session = await getServerSession(authOptions);
     const role = (session?.user as any)?.role;
@@ -13,10 +16,22 @@ export async function POST() {
       return apiError('FORBIDDEN', 'Admin role required.', 403);
     }
 
+    currentStep = 'config';
+    const configError = validateAdminSyncConfig();
+    if (configError) {
+      const formatted = formatAdminSyncError(currentStep, configError);
+      return apiError('VALIDATION_ERROR', formatted.message, 500, formatted.details);
+    }
+
     const { from, to } = buildAdminSyncWindow();
 
+    currentStep = 'syncCompetitions';
     const competitions = await syncCompetitions();
+
+    currentStep = 'syncFixtures';
     const fixtures = await syncFixtures(from, to);
+
+    currentStep = 'settleFinishedFixtures';
     const settlement = await settleFinishedFixtures();
 
     return apiSuccess({
@@ -29,6 +44,12 @@ export async function POST() {
       settlement,
     });
   } catch (error) {
-    return apiError('EXTERNAL_PROVIDER_ERROR', 'Fixture sync failed.', 500, error instanceof Error ? error.message : error);
+    const formatted = formatAdminSyncError(currentStep, error);
+    console.error('[admin-sync] sync failed', {
+      step: currentStep,
+      error: error instanceof Error ? error.message : error,
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    return apiError('EXTERNAL_PROVIDER_ERROR', formatted.message, 500, formatted.details);
   }
 }
