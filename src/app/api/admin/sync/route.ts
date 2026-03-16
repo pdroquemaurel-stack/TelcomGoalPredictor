@@ -3,6 +3,7 @@ import { authOptions } from '@/lib/auth';
 import { syncCompetitions, syncFixtures } from '@/lib/sync';
 import { settleFinishedFixtures } from '@/lib/services/settlement-service';
 import { apiError, apiSuccess } from '@/lib/api';
+import { buildAdminSyncWindow } from '@/lib/admin-sync-window';
 
 export async function POST() {
   try {
@@ -12,9 +13,7 @@ export async function POST() {
       return apiError('FORBIDDEN', 'Admin role required.', 403);
     }
 
-    const now = new Date();
-    const from = now.toISOString().slice(0, 10);
-    const to = new Date(now.getTime() + 10 * 86400000).toISOString().slice(0, 10);
+    const { from, to } = buildAdminSyncWindow();
 
     const competitions = await syncCompetitions();
     const fixtures = await syncFixtures(from, to);

@@ -5,6 +5,7 @@ import { getTeamInitials } from '@/lib/team-logo';
 import { formatMatchDateTime } from '@/lib/date-format';
 import { getPredictionScoreColorClasses } from '@/lib/prediction-score-colors';
 import { getFixtureLockVisualState } from '@/lib/fixture-lock-visuals';
+import { getPastFixtureStatusMessage, shouldShowFixtureOdds } from '@/lib/past-fixture-display';
 
 type Prediction = { homeScore: number; awayScore: number } | null;
 
@@ -22,6 +23,8 @@ type FixturePredictionCardProps = {
   points?: number;
   odds?: { homeWin: number; draw: number; awayWin: number };
   isLocked?: boolean;
+  isPastFixture?: boolean;
+  isFinishedWithoutScore?: boolean;
   onSaved?: (prediction: { homeScore: number; awayScore: number }) => void;
 };
 
@@ -106,6 +109,8 @@ export function FixturePredictionCard(props: FixturePredictionCardProps) {
     points,
     odds,
     isLocked = false,
+    isPastFixture = false,
+    isFinishedWithoutScore = false,
   } = props;
   const [prediction, setPrediction] = useState<Prediction>(props.savedPrediction);
   const [homeScore, setHomeScore] = useState(props.savedPrediction ? String(props.savedPrediction.homeScore) : '');
@@ -127,6 +132,8 @@ export function FixturePredictionCard(props: FixturePredictionCardProps) {
   const lockVisualState = getFixtureLockVisualState(isLocked && !finalScore);
   const canEditPrediction = editable && !isLocked && !finalScore;
   const displayOdds = getDisplayOdds(odds);
+  const shouldShowOdds = shouldShowFixtureOdds(isPastFixture);
+  const pastFixtureStatusMessage = getPastFixtureStatusMessage(isPastFixture, isFinishedWithoutScore);
 
   useEffect(() => () => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -228,11 +235,13 @@ export function FixturePredictionCard(props: FixturePredictionCardProps) {
               )}
             </div>
 
-            <div className="mt-1 grid w-full grid-cols-3 gap-1 rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-center text-[10px] font-bold text-zinc-200">
-              <span>1: {displayOdds.homeWin.toFixed(2)}</span>
-              <span>N: {displayOdds.draw.toFixed(2)}</span>
-              <span>2: {displayOdds.awayWin.toFixed(2)}</span>
-            </div>
+            {shouldShowOdds && (
+              <div className="mt-1 grid w-full grid-cols-3 gap-1 rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-center text-[10px] font-bold text-zinc-200" data-testid="fixture-odds">
+                <span>1: {displayOdds.homeWin.toFixed(2)}</span>
+                <span>N: {displayOdds.draw.toFixed(2)}</span>
+                <span>2: {displayOdds.awayWin.toFixed(2)}</span>
+              </div>
+            )}
 
             {(saving || saveState) && canEditPrediction && <p className="text-[10px] text-zinc-400">{saving ? 'Sauvegarde…' : saveState}</p>}
             {finalScore && prediction && (
@@ -246,6 +255,9 @@ export function FixturePredictionCard(props: FixturePredictionCardProps) {
             )}
             {finalScore && !prediction && (
               <p className="text-[10px] text-zinc-300">Final: {finalScore.homeScore}-{finalScore.awayScore}</p>
+            )}
+            {pastFixtureStatusMessage && (
+              <p className="text-[10px] text-zinc-300" data-testid="past-score-pending-message">{pastFixtureStatusMessage}</p>
             )}
             {finalScore && (
               <p className={`text-[10px] font-black ${getPointsClass(points)}`} data-testid="past-points">{getPointsLabel(points)}</p>
