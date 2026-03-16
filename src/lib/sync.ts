@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { footballProvider } from '@/lib/football';
 import { isFixtureFinished } from '@/lib/scoring';
 
-function mapFixtureState(statusText: string, homeScore?: number, awayScore?: number) {
+export function mapFixtureState(statusText: string, homeScore?: number | null, awayScore?: number | null) {
   if (isFixtureFinished(statusText, homeScore ?? null, awayScore ?? null)) {
     return { fixtureState: FixtureState.FINISHED, predictionEnabled: false };
   }
@@ -14,6 +14,16 @@ function mapFixtureState(statusText: string, homeScore?: number, awayScore?: num
   }
 
   return { fixtureState: FixtureState.SCHEDULED, predictionEnabled: true };
+}
+
+export function mergeFixtureScores(
+  existing: { homeScore: number | null; awayScore: number | null },
+  incoming: { homeScore?: number | null; awayScore?: number | null },
+) {
+  return {
+    homeScore: incoming.homeScore ?? existing.homeScore,
+    awayScore: incoming.awayScore ?? existing.awayScore,
+  };
 }
 
 export async function syncCompetitions() {
@@ -82,13 +92,24 @@ export async function syncFixtures(from: string, to: string) {
       },
     });
 
-    const { fixtureState, predictionEnabled } = mapFixtureState(
-      fixtureData.statusText,
-      fixtureData.homeScore,
-      fixtureData.awayScore,
+    const existing = await prisma.fixture.findUnique({
+      where: { externalId: fixtureData.externalId },
+      select: { id: true, homeScore: true, awayScore: true, fixtureState: true },
+    });
+
+    const mergedScores = mergeFixtureScores(
+      { homeScore: existing?.homeScore ?? null, awayScore: existing?.awayScore ?? null },
+      { homeScore: fixtureData.homeScore, awayScore: fixtureData.awayScore },
     );
 
-    const existing = await prisma.fixture.findUnique({ where: { externalId: fixtureData.externalId }, select: { id: true } });
+    const { fixtureState, predictionEnabled } = mapFixtureState(
+      fixtureData.statusText,
+      mergedScores.homeScore,
+      mergedScores.awayScore,
+    );
+
+    const nextFixtureState = existing?.fixtureState === FixtureState.SETTLED ? FixtureState.SETTLED : fixtureState;
+
     if (existing) updated += 1;
     else created += 1;
 
@@ -103,16 +124,16 @@ export async function syncFixtures(from: string, to: string) {
         statusText: fixtureData.statusText,
         fixtureState,
         predictionEnabled,
-        homeScore: fixtureData.homeScore,
-        awayScore: fixtureData.awayScore,
+        homeScore: mergedScores.homeScore,
+        awayScore: mergedScores.awayScore,
       },
       update: {
         statusText: fixtureData.statusText,
-        fixtureState,
-        predictionEnabled,
+        fixtureState: nextFixtureState,
+        predictionEnabled: nextFixtureState === FixtureState.SETTLED ? false : predictionEnabled,
         utcKickoff: new Date(fixtureData.utcKickoff),
-        homeScore: fixtureData.homeScore,
-        awayScore: fixtureData.awayScore,
+        homeScore: mergedScores.homeScore,
+        awayScore: mergedScores.awayScore,
       },
     });
   }
