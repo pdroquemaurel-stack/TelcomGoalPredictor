@@ -73,13 +73,21 @@ export async function getChallengeDetailBySlug(slug: string, userId: string) {
     .sort((a, b) => +new Date(a.utcKickoff) - +new Date(b.utcKickoff))
     .map((fixture) => ({
       id: fixture.id,
-      kickoff: fixture.utcKickoff,
+      kickoff: fixture.utcKickoff.toISOString(),
       competition: fixture.competition.name,
       home: fixture.homeTeam.name,
       away: fixture.awayTeam.name,
       homeLogoUrl: getTeamLogoUrl(fixture.homeTeam),
       awayLogoUrl: getTeamLogoUrl(fixture.awayTeam),
-      canPredict: fixture.predictionEnabled,
+      fixtureState: fixture.fixtureState,
+      predictionEnabled: fixture.predictionEnabled,
+      points: fixture.predictions[0]?.pointsAwarded ?? 0,
+      finalScore: fixture.homeScore !== null && fixture.awayScore !== null
+        ? {
+            homeScore: fixture.homeScore,
+            awayScore: fixture.awayScore,
+          }
+        : null,
       savedPrediction: fixture.predictions[0]
         ? {
             homeScore: fixture.predictions[0].homeScore,

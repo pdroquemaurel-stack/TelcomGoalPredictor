@@ -44,12 +44,12 @@ test('live fixture remains visible in upcoming tab but is rendered locked for ed
   assert.match(endpoint, /lifecycleStatus === 'live' \|\| lifecycleStatus === 'locked'/);
 });
 
-test('past fixtures keep historical behavior: kickoff in the past and prediction saved', () => {
+test('past fixtures only include resolved fixtures with prediction', () => {
   const now = +new Date('2026-03-12T15:00:00.000Z');
 
-  assert.equal(isPastFixture({ fixtureState: 'FINISHED', kickoff: '2026-03-12T14:00:00.000Z', savedPrediction: { homeScore: 1, awayScore: 0 } }, now), true);
-  assert.equal(isPastFixture({ fixtureState: 'FINISHED', kickoff: '2026-03-12T14:00:00.000Z', savedPrediction: null }, now), false);
-  assert.equal(isPastFixture({ fixtureState: 'SCHEDULED', kickoff: '2026-03-12T18:00:00.000Z', savedPrediction: { homeScore: 1, awayScore: 0 } }, now), false);
+  assert.equal(isPastFixture({ fixtureState: 'FINISHED', lifecycleStatus: 'resolved', kickoff: '2026-03-12T14:00:00.000Z', savedPrediction: { homeScore: 1, awayScore: 0 } }, now), true);
+  assert.equal(isPastFixture({ fixtureState: 'FINISHED', lifecycleStatus: 'resolved', kickoff: '2026-03-12T14:00:00.000Z', savedPrediction: null }, now), false);
+  assert.equal(isPastFixture({ fixtureState: 'SCHEDULED', lifecycleStatus: 'locked', kickoff: '2026-03-12T12:00:00.000Z', savedPrediction: { homeScore: 1, awayScore: 0 } }, now), false);
 });
 
 test('daily page redirects to unified predictions page', async () => {
@@ -69,19 +69,19 @@ test('predictions screen no longer renders a competition selector', async () => 
   assert.match(client, /Matchs passés/);
 });
 
-test('predictions screen includes quick toggle for "Afficher uniquement mes pronos" and applies it on upcoming', async () => {
+test('predictions screen shows X / Y counter and no mine-only toggle', async () => {
   const client = await fs.readFile('src/app/predictions/predictions-client.tsx', 'utf8');
-  assert.match(client, /Afficher uniquement mes pronos/);
-  assert.match(client, /showOnlyMine \? Boolean\(fixture.savedPrediction\) : true/);
-  assert.match(client, /\{showOnlyMine \? 'On' : 'Off'\}/);
+  assert.match(client, /pronostic\(s\) enregistré\(s\) \/ \{availablePredictionsCount\}/);
+  assert.doesNotMatch(client, /Afficher uniquement mes pronos/);
 });
+
 
 test('fixture card blocks editing when locked or resolved and keeps lock overlay for locked', async () => {
   const card = await fs.readFile('src/components/fixture-prediction-card.tsx', 'utf8');
   assert.match(card, /const canEditPrediction = editable && !isLocked && !finalScore/);
-  assert.match(card, /\{canEditPrediction \? \(/);
-  assert.match(card, /data-testid="locked-overlay"/);
-  assert.match(card, /Pronostic verrouillé/);
+  assert.match(card, /data-testid="past-score-display"/);
+  assert.match(card, /data-testid="past-points"/);
+  assert.match(card, /getFixtureLockVisualState\(isLocked && !finalScore\)/);
 });
 
 test('public fixtures endpoint only uses admin-visible active competitions', async () => {

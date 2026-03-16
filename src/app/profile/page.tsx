@@ -1,22 +1,53 @@
 import { PlayerNav } from '@/components/player-nav';
 import { prisma } from '@/lib/prisma';
 import { requireOnboardedUser } from '@/lib/player-access';
+import { LogoutButton } from '@/components/logout-button';
+import { calculatePredictionActivityStreak } from '@/lib/profile-streak';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+function StreakDots({ streak }: { streak: number }) {
+  const displayed = Math.min(streak, 7);
+
+  return (
+    <section className="card">
+      <h2 className="section-title">Streak 7 jours</h2>
+      <div className="mt-3 grid grid-cols-7 gap-2">
+        {Array.from({ length: 7 }, (_, index) => {
+          const filled = index < displayed;
+          return (
+            <div key={index + 1} className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-black ${filled ? 'bg-[#FF7900] text-black' : 'bg-zinc-800 text-zinc-300'}`}>
+              {index + 1}
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 export default async function ProfilePage() {
   const { me } = await requireOnboardedUser();
 
-  const profile = await prisma.profile.findUnique({
-    where: { userId: me.id },
-    include: {
-      user: { include: { badges: { include: { badge: true }, orderBy: { createdAt: 'desc' }, take: 4 } } },
-      country: true,
-    },
-  });
+  const [profile, allBadges, predictions] = await Promise.all([
+    prisma.profile.findUnique({
+      where: { userId: me.id },
+      include: {
+        user: { include: { badges: { include: { badge: true }, orderBy: { createdAt: 'desc' } } } },
+        country: true,
+      },
+    }),
+    prisma.badge.findMany({ orderBy: { name: 'asc' } }),
+    prisma.prediction.findMany({ where: { userId: me.id }, select: { createdAt: true } }),
+  ]);
 
-  const badges = profile?.user.badges ?? [];
+  const ownedBadgeIds = new Set((profile?.user.badges ?? []).map((item) => item.badgeId));
+  const orderedBadges = allBadges
+    .map((badge) => ({ badge, earned: ownedBadgeIds.has(badge.id) }))
+    .sort((a, b) => Number(b.earned) - Number(a.earned) || a.badge.name.localeCompare(b.badge.name));
+
+  const streak = calculatePredictionActivityStreak(predictions.map((prediction) => prediction.createdAt));
 
   return (
     <main className="mx-auto max-w-md space-y-4 px-4 pb-28 pt-5">
@@ -25,6 +56,8 @@ export default async function ProfilePage() {
         <h1 className="mt-1 text-3xl font-black">{profile?.displayName ?? 'Player'}</h1>
         <p className="mt-1 text-sm font-semibold">@{profile?.user.username ?? 'player'} • Niveau {profile?.level ?? 'Rookie'}</p>
       </header>
+
+      <StreakDots streak={streak} />
 
       <section className="card">
         <h2 className="section-title">KPI principaux</h2>
@@ -52,18 +85,25 @@ export default async function ProfilePage() {
 
       <section className="card">
         <h2 className="section-title">Badges</h2>
-        {badges.length > 0 ? (
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            {badges.map((userBadge) => (
-              <article key={userBadge.id} className="rounded-2xl border border-white/10 bg-zinc-900 p-3">
-                <p className="text-sm font-black">{userBadge.badge.name}</p>
-                <p className="mt-1 text-xs text-zinc-300">{userBadge.badge.description}</p>
+        {orderedBadges.length > 0 ? (
+          <div className="mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1">
+            {orderedBadges.map(({ badge, earned }) => (
+              <article key={badge.id} className={`min-w-[190px] snap-start rounded-2xl border p-3 ${earned ? 'border-brand/60 bg-zinc-900' : 'border-white/10 bg-zinc-900/60 opacity-60'}`}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img alt={badge.name} className="h-16 w-16 rounded-xl object-cover" src={`/badges/${badge.code}.webp`} />
+                <p className="mt-2 text-sm font-black">{badge.name}</p>
+                <p className="mt-1 text-xs text-zinc-300">{badge.description}</p>
+                <p className={`mt-2 text-[11px] font-black ${earned ? 'text-emerald-400' : 'text-zinc-400'}`}>{earned ? 'Obtenu' : 'À débloquer'}</p>
               </article>
             ))}
           </div>
         ) : (
-          <p className="mt-2 text-sm text-zinc-300">Aucun badge débloqué pour l’instant. Continue de jouer pour en gagner.</p>
+          <p className="mt-2 text-sm text-zinc-300">Aucun badge disponible pour l’instant.</p>
         )}
+      </section>
+
+      <section className="card">
+        <LogoutButton />
       </section>
 
       <PlayerNav />

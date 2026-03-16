@@ -10,6 +10,7 @@ export default function SignUpPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const submit = async () => {
     setError('');
@@ -47,18 +48,28 @@ export default function SignUpPage() {
       <h1 className="mb-4 text-2xl font-bold">Create account</h1>
       <div className="card space-y-3">
         <input
-          className="w-full rounded border p-2"
+          className="w-full rounded border border-white/20 bg-zinc-900 p-2 text-zinc-100 placeholder:text-zinc-500"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           placeholder="Username"
         />
-        <input
-          className="w-full rounded border p-2"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Password"
-        />
+        <div className="flex items-center gap-2 rounded border border-white/20 bg-zinc-900 p-2">
+          <input
+            className="w-full bg-transparent text-zinc-100 placeholder:text-zinc-500 outline-none"
+            type={showPassword ? 'text' : 'password'}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Password"
+          />
+          <button
+            aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+            className="text-lg leading-none text-zinc-300"
+            onClick={() => setShowPassword((value) => !value)}
+            type="button"
+          >
+            {showPassword ? '🙈' : '👁️'}
+          </button>
+        </div>
         {error && <p className="rounded border border-red-500/60 bg-red-950/50 p-2 text-sm font-semibold text-red-300">{error}</p>}
         <button className="w-full rounded bg-brand p-2 text-white" disabled={isLoading} onClick={submit} type="button">
           {isLoading ? 'Creating account...' : 'Sign up'}
