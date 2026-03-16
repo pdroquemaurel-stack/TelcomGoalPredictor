@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { getTeamInitials } from '@/lib/team-logo';
 import { formatMatchDateTime } from '@/lib/date-format';
 import { getPredictionScoreColorClasses } from '@/lib/prediction-score-colors';
@@ -131,6 +131,14 @@ export function FixturePredictionCard(props: FixturePredictionCardProps) {
   const inputColors = getPredictionScoreColorClasses(livePrediction);
   const lockVisualState = getFixtureLockVisualState(isLocked && !finalScore);
   const canEditPrediction = editable && !isLocked && !finalScore;
+  const shouldShowPredictionInScoreBox = !isPastFixture;
+  const scoreBoxMode = canEditPrediction
+    ? 'inputs'
+    : shouldShowPredictionInScoreBox && prediction
+      ? 'prediction'
+      : shouldShowPredictionInScoreBox
+        ? 'placeholder'
+        : 'history-placeholder';
   const displayOdds = getDisplayOdds(odds);
   const shouldShowOdds = shouldShowFixtureOdds(isPastFixture);
   const pastFixtureStatusMessage = getPastFixtureStatusMessage(isPastFixture, isFinishedWithoutScore);
@@ -204,8 +212,8 @@ export function FixturePredictionCard(props: FixturePredictionCardProps) {
           </div>
 
           <div className="flex flex-col items-center gap-1">
-            <div className="flex items-center gap-1 rounded-xl border border-white/15 bg-zinc-900 px-2 py-1">
-              {canEditPrediction ? (
+            <div className="flex items-center gap-1 rounded-xl border border-white/15 bg-zinc-900 px-2 py-1" data-score-box-mode={scoreBoxMode}>
+              {scoreBoxMode === 'inputs' ? (
                 <>
                   <input
                     className={`h-9 w-10 rounded-lg border border-white/20 bg-black text-center text-base font-black ${inputColors.home}`}
@@ -224,14 +232,16 @@ export function FixturePredictionCard(props: FixturePredictionCardProps) {
                     value={awayScore}
                   />
                 </>
-              ) : prediction ? (
+              ) : scoreBoxMode === 'prediction' ? (
                 <>
-                  <span className={`text-lg font-black ${colors.home}`}>{prediction.homeScore}</span>
+                  <span className={`text-lg font-black ${colors.home}`}>{prediction?.homeScore}</span>
                   <span className="text-zinc-500">-</span>
-                  <span className={`text-lg font-black ${colors.away}`}>{prediction.awayScore}</span>
+                  <span className={`text-lg font-black ${colors.away}`}>{prediction?.awayScore}</span>
                 </>
-              ) : (
+              ) : scoreBoxMode === 'placeholder' ? (
                 <span className="text-zinc-300">? - ?</span>
+              ) : (
+                <span aria-hidden className="text-zinc-500">—</span>
               )}
             </div>
 
