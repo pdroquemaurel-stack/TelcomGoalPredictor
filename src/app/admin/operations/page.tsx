@@ -16,7 +16,11 @@ export default function AdminOperationsPage() {
     if (res.ok) {
       setResult(`✅ Sync ok • compétitions: ${body.data.competitionsSynced}, matchs créés: ${body.data.fixturesCreated}, matchs mis à jour: ${body.data.fixturesUpdated}`);
     } else {
-      setResult(`❌ Sync échouée: ${body?.error?.message ?? 'Erreur inconnue'}`);
+      const message = body?.error?.message ?? 'Erreur inconnue';
+      const details = typeof body?.error?.details === 'string' && body.error.details.length > 0
+        ? ` Détail: ${body.error.details}`
+        : '';
+      setResult(`❌ Sync échouée: ${message}${details}`);
     }
     setLoadingSync(false);
   };

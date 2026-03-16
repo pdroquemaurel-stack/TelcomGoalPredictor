@@ -73,6 +73,8 @@ export function ChallengeFixturesClient({ fixtures }: { fixtures: ChallengeFixtu
                 kickoff={fixture.kickoff}
                 points={fixture.points}
                 savedPrediction={fixture.savedPrediction}
+                isPastFixture={tab === 'past'}
+                isFinishedWithoutScore={tab === 'past' && fixture.finalScore === null && (fixture.fixtureState === 'FINISHED' || fixture.fixtureState === 'SETTLED')}
                 isLocked={false}
               />
             ))}

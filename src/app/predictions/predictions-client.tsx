@@ -120,6 +120,8 @@ export function PredictionsClient() {
                   points={fixture.points}
                   savedPrediction={fixture.savedPrediction}
                   odds={fixture.odds}
+                  isPastFixture={tab === 'past'}
+                  isFinishedWithoutScore={tab === 'past' && fixture.finalScore === null && (fixture.fixtureState === 'FINISHED' || fixture.fixtureState === 'SETTLED')}
                   isLocked={tab === 'upcoming' && fixture.state === 'locked'}
                 />
               );
