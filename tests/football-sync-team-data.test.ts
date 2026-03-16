@@ -68,6 +68,50 @@ test('football-data fixtures fallback to regularTime score when fullTime is miss
   }
 });
 
+test('football-data fixtures request uses dateFrom/dateTo query params', async () => {
+  const originalFetch = global.fetch;
+  let requestedUrl = '';
+
+  global.fetch = (async (input: RequestInfo | URL) => {
+    requestedUrl = String(input);
+    return {
+      ok: true,
+      json: async () => ({ matches: [] }),
+    };
+  }) as any;
+
+  try {
+    const provider = new FootballDataProvider();
+    await provider.getFixtures({ from: '2026-03-01', to: '2026-03-10' });
+
+    assert.match(requestedUrl, /\/matches\?dateFrom=2026-03-01&dateTo=2026-03-10$/);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test('football-data errors expose provider details when available', async () => {
+  const originalFetch = global.fetch;
+  global.fetch = (async () => ({
+    ok: false,
+    status: 400,
+    clone() {
+      return { json: async () => ({ message: 'Invalid dateFrom parameter' }) };
+    },
+    text: async () => '',
+  })) as any;
+
+  try {
+    const provider = new FootballDataProvider();
+    await assert.rejects(
+      provider.getFixtures({ from: '2026-99-99', to: '2026-03-10' }),
+      /football-data error 400: Invalid dateFrom parameter/,
+    );
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
 test('team logo resolver uses crestUrl before local fallback', () => {
   assert.equal(getTeamLogoUrl({ name: 'Arsenal', crestUrl: 'https://crest/arsenal.png' }), 'https://crest/arsenal.png');
   assert.equal(getTeamLogoUrl({ name: 'Real Madrid' }), '/teams/real-madrid.png');

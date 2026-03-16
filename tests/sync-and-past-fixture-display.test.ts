@@ -9,12 +9,12 @@ import {
   shouldShowFixtureOdds,
 } from '@/lib/past-fixture-display';
 
-test('admin sync window includes recently finished matches (J-5 to J+10)', () => {
+test('admin sync window includes recently finished matches with a 10-day span (J-3 to J+7)', () => {
   const now = new Date('2026-07-20T10:00:00.000Z');
   const window = buildAdminSyncWindow(now);
 
-  assert.equal(window.from, '2026-07-15');
-  assert.equal(window.to, '2026-07-30');
+  assert.equal(window.from, '2026-07-17');
+  assert.equal(window.to, '2026-07-27');
 });
 
 test('mergeFixtureScores keeps existing persisted score when provider score is null', () => {

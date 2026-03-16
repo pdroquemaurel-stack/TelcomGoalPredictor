@@ -2,12 +2,40 @@ import { FootballProvider, DateRange } from './types';
 
 const BASE = 'https://api.football-data.org/v4';
 
+function getErrorMessageFromBody(body: unknown) {
+  if (!body || typeof body !== 'object') return null;
+  if ('message' in body && typeof body.message === 'string') return body.message;
+  if ('error' in body && typeof body.error === 'string') return body.error;
+  if ('detail' in body && typeof body.detail === 'string') return body.detail;
+  return null;
+}
+
+async function readErrorDetails(res: Response) {
+  try {
+    const body = await res.clone().json();
+    const message = getErrorMessageFromBody(body);
+    if (message) return message;
+  } catch {
+    // noop: body might not be valid JSON
+  }
+
+  try {
+    const text = (await res.text()).trim();
+    return text || null;
+  } catch {
+    return null;
+  }
+}
+
 async function fetchJSON(path: string) {
   const res = await fetch(`${BASE}${path}`, {
     headers: { 'X-Auth-Token': process.env.FOOTBALL_DATA_API_KEY || '' },
     next: { revalidate: 1800 },
   });
-  if (!res.ok) throw new Error(`football-data error ${res.status}`);
+  if (!res.ok) {
+    const details = await readErrorDetails(res);
+    throw new Error(`football-data error ${res.status}${details ? `: ${details}` : ''}`);
+  }
   return res.json();
 }
 
