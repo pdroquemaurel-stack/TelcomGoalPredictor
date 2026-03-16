@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { getTeamInitials } from '@/lib/team-logo';
 import { formatMatchDateTime } from '@/lib/date-format';
 import { getPredictionScoreColorClasses } from '@/lib/prediction-score-colors';
 import { getFixtureLockVisualState } from '@/lib/fixture-lock-visuals';
+import { getPastFixtureStatusMessage, shouldShowFixtureOdds } from '@/lib/past-fixture-display';
 
 type Prediction = { homeScore: number; awayScore: number } | null;
 
@@ -22,6 +23,8 @@ type FixturePredictionCardProps = {
   points?: number;
   odds?: { homeWin: number; draw: number; awayWin: number };
   isLocked?: boolean;
+  isPastFixture?: boolean;
+  isFinishedWithoutScore?: boolean;
   onSaved?: (prediction: { homeScore: number; awayScore: number }) => void;
 };
 
@@ -63,6 +66,21 @@ function toScoreValue(value: string) {
   return Math.max(0, Math.min(20, Number(value)));
 }
 
+
+
+function getPointsClass(points: number | undefined) {
+  if (typeof points !== 'number') return 'text-zinc-300';
+  if (points >= 3) return 'text-emerald-400';
+  if (points >= 1) return 'text-sky-400';
+  return 'text-zinc-400';
+}
+
+function getPointsLabel(points: number | undefined) {
+  if (typeof points !== 'number') return '';
+  if (points >= 3) return '+3pt';
+  if (points >= 1) return '+1pt';
+  return '0pt';
+}
 function LockBadge({ className }: { className: string }) {
   return (
     <span
@@ -91,6 +109,8 @@ export function FixturePredictionCard(props: FixturePredictionCardProps) {
     points,
     odds,
     isLocked = false,
+    isPastFixture = false,
+    isFinishedWithoutScore = false,
   } = props;
   const [prediction, setPrediction] = useState<Prediction>(props.savedPrediction);
   const [homeScore, setHomeScore] = useState(props.savedPrediction ? String(props.savedPrediction.homeScore) : '');
@@ -109,9 +129,19 @@ export function FixturePredictionCard(props: FixturePredictionCardProps) {
     ? { homeScore: typedHomeValue, awayScore: typedAwayValue }
     : null;
   const inputColors = getPredictionScoreColorClasses(livePrediction);
-  const lockVisualState = getFixtureLockVisualState(isLocked);
+  const lockVisualState = getFixtureLockVisualState(isLocked && !finalScore);
   const canEditPrediction = editable && !isLocked && !finalScore;
+  const shouldShowPredictionInScoreBox = !isPastFixture;
+  const scoreBoxMode = canEditPrediction
+    ? 'inputs'
+    : shouldShowPredictionInScoreBox && prediction
+      ? 'prediction'
+      : shouldShowPredictionInScoreBox
+        ? 'placeholder'
+        : 'history-placeholder';
   const displayOdds = getDisplayOdds(odds);
+  const shouldShowOdds = shouldShowFixtureOdds(isPastFixture);
+  const pastFixtureStatusMessage = getPastFixtureStatusMessage(isPastFixture, isFinishedWithoutScore);
 
   useEffect(() => () => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -182,8 +212,8 @@ export function FixturePredictionCard(props: FixturePredictionCardProps) {
           </div>
 
           <div className="flex flex-col items-center gap-1">
-            <div className="flex items-center gap-1 rounded-xl border border-white/15 bg-zinc-900 px-2 py-1">
-              {canEditPrediction ? (
+            <div className="flex items-center gap-1 rounded-xl border border-white/15 bg-zinc-900 px-2 py-1" data-score-box-mode={scoreBoxMode}>
+              {scoreBoxMode === 'inputs' ? (
                 <>
                   <input
                     className={`h-9 w-10 rounded-lg border border-white/20 bg-black text-center text-base font-black ${inputColors.home}`}
@@ -202,25 +232,46 @@ export function FixturePredictionCard(props: FixturePredictionCardProps) {
                     value={awayScore}
                   />
                 </>
-              ) : prediction ? (
+              ) : scoreBoxMode === 'prediction' ? (
                 <>
-                  <span className={`text-lg font-black ${colors.home}`}>{prediction.homeScore}</span>
+                  <span className={`text-lg font-black ${colors.home}`}>{prediction?.homeScore}</span>
                   <span className="text-zinc-500">-</span>
-                  <span className={`text-lg font-black ${colors.away}`}>{prediction.awayScore}</span>
+                  <span className={`text-lg font-black ${colors.away}`}>{prediction?.awayScore}</span>
                 </>
-              ) : (
+              ) : scoreBoxMode === 'placeholder' ? (
                 <span className="text-zinc-300">? - ?</span>
+              ) : (
+                <span aria-hidden className="text-zinc-500">—</span>
               )}
             </div>
 
-            <div className="mt-1 grid w-full grid-cols-3 gap-1 rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-center text-[10px] font-bold text-zinc-200">
-              <span>1: {displayOdds.homeWin.toFixed(2)}</span>
-              <span>N: {displayOdds.draw.toFixed(2)}</span>
-              <span>2: {displayOdds.awayWin.toFixed(2)}</span>
-            </div>
+            {shouldShowOdds && (
+              <div className="mt-1 grid w-full grid-cols-3 gap-1 rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-center text-[10px] font-bold text-zinc-200" data-testid="fixture-odds">
+                <span>1: {displayOdds.homeWin.toFixed(2)}</span>
+                <span>N: {displayOdds.draw.toFixed(2)}</span>
+                <span>2: {displayOdds.awayWin.toFixed(2)}</span>
+              </div>
+            )}
 
             {(saving || saveState) && canEditPrediction && <p className="text-[10px] text-zinc-400">{saving ? 'Sauvegarde…' : saveState}</p>}
-            {finalScore && <p className="text-[10px] text-zinc-300">Final: {finalScore.homeScore}-{finalScore.awayScore} {typeof points === 'number' ? `• ${points} pts` : ''}</p>}
+            {finalScore && prediction && (
+              <div className="mt-1 flex items-center gap-1 text-xs font-bold" data-testid="past-score-display">
+                <span className="text-zinc-500">({prediction.homeScore})</span>
+                <span className={`text-xl ${getPredictionScoreColorClasses(finalScore).home}`}>{finalScore.homeScore}</span>
+                <span className="text-zinc-500">-</span>
+                <span className={`text-xl ${getPredictionScoreColorClasses(finalScore).away}`}>{finalScore.awayScore}</span>
+                <span className="text-zinc-500">({prediction.awayScore})</span>
+              </div>
+            )}
+            {finalScore && !prediction && (
+              <p className="text-[10px] text-zinc-300">Final: {finalScore.homeScore}-{finalScore.awayScore}</p>
+            )}
+            {pastFixtureStatusMessage && (
+              <p className="text-[10px] text-zinc-300" data-testid="past-score-pending-message">{pastFixtureStatusMessage}</p>
+            )}
+            {finalScore && (
+              <p className={`text-[10px] font-black ${getPointsClass(points)}`} data-testid="past-points">{getPointsLabel(points)}</p>
+            )}
           </div>
 
           <div className="flex flex-col items-center gap-1">

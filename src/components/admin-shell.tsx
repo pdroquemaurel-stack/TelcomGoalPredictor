@@ -8,6 +8,7 @@ const links = [
   ['/admin/fixtures', 'Matches'],
   ['/admin/operations', 'Operations'],
   ['/admin/users', 'Users'],
+  ['/admin/badges', 'Badges'],
 ];
 
 export function AdminShell({ children }: { children: ReactNode }) {
