@@ -19,7 +19,7 @@ async function resolveAvailableFriendCode(baseCode: string) {
 
 async function main() {
   const users = [
-    { username: 'admin', password: 'admin', role: UserRole.ADMIN, friendCode: 'ADMIN001', displayName: 'Demo Admin' },
+    { username: 'admin', password: 'admin123!', role: UserRole.ADMIN, friendCode: 'ADMIN001', displayName: 'Demo Admin' },
     { username: 'joueur1', password: 'joueur1', role: UserRole.PLAYER, friendCode: 'PLAY001', displayName: 'Joueur 1' },
     { username: 'joueur2', password: 'joueur2', role: UserRole.PLAYER, friendCode: 'PLAY002', displayName: 'Joueur 2' },
     { username: 'player', password: 'player', role: UserRole.PLAYER, friendCode: 'PLAY003', displayName: 'Demo Player' },
