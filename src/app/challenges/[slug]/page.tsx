@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { getChallengeDetailBySlug, getChallengeLeaderboard } from '@/lib/services/challenge-service';
 import { PlayerNav } from '@/components/player-nav';
-import { FixturePredictionCard } from '@/components/fixture-prediction-card';
+import { ChallengeFixturesClient } from '@/app/challenges/[slug]/challenge-fixtures-client';
 import { requireAuthenticatedUser } from '@/lib/session-user';
 
 export const dynamic = 'force-dynamic';
@@ -25,25 +25,7 @@ export default async function ChallengeDetailPage({ params }: { params: { slug: 
 
       {challenge.description && <section className="card text-sm text-zinc-200">{challenge.description}</section>}
 
-      <section className="card">
-        <h2 className="section-title">Matchs du challenge</h2>
-        <div className="mt-2 space-y-2">
-          {challenge.fixtures.map((fixture) => (
-            <FixturePredictionCard
-              key={fixture.id}
-              away={fixture.away}
-              awayLogoUrl={fixture.awayLogoUrl}
-              competition={fixture.competition}
-              editable={fixture.canPredict}
-              fixtureId={fixture.id}
-              home={fixture.home}
-              homeLogoUrl={fixture.homeLogoUrl}
-              kickoff={fixture.kickoff}
-              savedPrediction={fixture.savedPrediction}
-            />
-          ))}
-        </div>
-      </section>
+      <ChallengeFixturesClient fixtures={challenge.fixtures} />
 
       <section className="card">
         <h2 className="section-title">Classement challenge</h2>

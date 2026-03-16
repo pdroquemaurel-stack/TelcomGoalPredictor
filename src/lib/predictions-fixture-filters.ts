@@ -13,5 +13,7 @@ export function isUpcomingFixture(fixture: FixtureForFilters) {
 }
 
 export function isPastFixture(fixture: FixtureForFilters, now = Date.now()) {
-  return +new Date(fixture.kickoff) < now && Boolean(fixture.savedPrediction);
+  if (!fixture.savedPrediction) return false;
+  if (fixture.lifecycleStatus) return fixture.lifecycleStatus === 'resolved';
+  return (fixture.fixtureState === 'FINISHED' || fixture.fixtureState === 'SETTLED') && +new Date(fixture.kickoff) <= now;
 }

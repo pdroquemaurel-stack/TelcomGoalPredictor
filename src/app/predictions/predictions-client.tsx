@@ -31,7 +31,6 @@ export function PredictionsClient() {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>('upcoming');
-  const [showOnlyMine, setShowOnlyMine] = useState(false);
 
   useEffect(() => {
     const refreshFixtures = async () => {
@@ -55,27 +54,27 @@ export function PredictionsClient() {
   const upcomingFixtures = useMemo(
     () => fixtures
       .filter((fixture) => isUpcomingFixture(fixture))
-      .filter((fixture) => (showOnlyMine ? Boolean(fixture.savedPrediction) : true))
       .sort((a, b) => +new Date(a.kickoff) - +new Date(b.kickoff)),
-    [fixtures, showOnlyMine],
+    [fixtures],
   );
 
   const pastFixtures = useMemo(
     () => fixtures
       .filter((fixture) => isPastFixture(fixture))
-      .sort((a, b) => +new Date(a.kickoff) - +new Date(b.kickoff)),
+      .sort((a, b) => +new Date(b.kickoff) - +new Date(a.kickoff)),
     [fixtures],
   );
 
   const groupedFixtures = groupFixturesByDay(tab === 'upcoming' ? upcomingFixtures : pastFixtures);
-  const predictedMatches = fixtures.filter((fixture) => fixture.savedPrediction).length;
+  const availablePredictionsCount = upcomingFixtures.length;
+  const savedUpcomingPredictionsCount = upcomingFixtures.filter((fixture) => Boolean(fixture.savedPrediction)).length;
 
   return (
     <main className="mx-auto max-w-md space-y-4 px-4 pb-28 pt-5">
       <header className="rounded-3xl bg-brand p-5 text-black">
         <p className="text-xs font-black uppercase tracking-[0.18em]">Pronos</p>
         <h1 className="mt-1 text-2xl font-black">Tous les matchs visibles</h1>
-        <p className="mt-1 text-sm font-bold">{predictedMatches} pronostic(s) enregistré(s)</p>
+        <p className="mt-1 text-sm font-bold">{savedUpcomingPredictionsCount} pronostic(s) enregistré(s) / {availablePredictionsCount}</p>
       </header>
 
       <section className="card border-brand bg-brand/10 text-sm">
@@ -88,17 +87,6 @@ export function PredictionsClient() {
         ))}
       </section>
 
-      <section className="flex items-center justify-between rounded-2xl border border-white/10 bg-zinc-950 px-3 py-2">
-        <p className="text-xs font-semibold text-zinc-200">Afficher uniquement mes pronos</p>
-        <button
-          aria-pressed={showOnlyMine}
-          className={`rounded-full px-3 py-1 text-xs font-black transition ${showOnlyMine ? 'bg-emerald-500 text-black' : 'border border-white/20 bg-black text-zinc-200'}`}
-          onClick={() => setShowOnlyMine((current) => !current)}
-          type="button"
-        >
-          {showOnlyMine ? 'On' : 'Off'}
-        </button>
-      </section>
 
       {message && <p className="rounded-2xl border border-brand bg-brand/10 px-4 py-3 text-sm font-semibold text-orange-100">{message}</p>}
       {loading && <section className="card text-sm text-zinc-300">Chargement des matchs...</section>}
@@ -132,7 +120,7 @@ export function PredictionsClient() {
                   points={fixture.points}
                   savedPrediction={fixture.savedPrediction}
                   odds={fixture.odds}
-                  isLocked={fixture.state === 'locked'}
+                  isLocked={tab === 'upcoming' && fixture.state === 'locked'}
                 />
               );
             })}

@@ -63,6 +63,21 @@ function toScoreValue(value: string) {
   return Math.max(0, Math.min(20, Number(value)));
 }
 
+
+
+function getPointsClass(points: number | undefined) {
+  if (typeof points !== 'number') return 'text-zinc-300';
+  if (points >= 3) return 'text-emerald-400';
+  if (points >= 1) return 'text-sky-400';
+  return 'text-zinc-400';
+}
+
+function getPointsLabel(points: number | undefined) {
+  if (typeof points !== 'number') return '';
+  if (points >= 3) return '+3pt';
+  if (points >= 1) return '+1pt';
+  return '0pt';
+}
 function LockBadge({ className }: { className: string }) {
   return (
     <span
@@ -109,7 +124,7 @@ export function FixturePredictionCard(props: FixturePredictionCardProps) {
     ? { homeScore: typedHomeValue, awayScore: typedAwayValue }
     : null;
   const inputColors = getPredictionScoreColorClasses(livePrediction);
-  const lockVisualState = getFixtureLockVisualState(isLocked);
+  const lockVisualState = getFixtureLockVisualState(isLocked && !finalScore);
   const canEditPrediction = editable && !isLocked && !finalScore;
   const displayOdds = getDisplayOdds(odds);
 
@@ -220,7 +235,21 @@ export function FixturePredictionCard(props: FixturePredictionCardProps) {
             </div>
 
             {(saving || saveState) && canEditPrediction && <p className="text-[10px] text-zinc-400">{saving ? 'Sauvegarde…' : saveState}</p>}
-            {finalScore && <p className="text-[10px] text-zinc-300">Final: {finalScore.homeScore}-{finalScore.awayScore} {typeof points === 'number' ? `• ${points} pts` : ''}</p>}
+            {finalScore && prediction && (
+              <div className="mt-1 flex items-center gap-1 text-xs font-bold" data-testid="past-score-display">
+                <span className="text-zinc-500">({prediction.homeScore})</span>
+                <span className={`text-xl ${getPredictionScoreColorClasses(finalScore).home}`}>{finalScore.homeScore}</span>
+                <span className="text-zinc-500">-</span>
+                <span className={`text-xl ${getPredictionScoreColorClasses(finalScore).away}`}>{finalScore.awayScore}</span>
+                <span className="text-zinc-500">({prediction.awayScore})</span>
+              </div>
+            )}
+            {finalScore && !prediction && (
+              <p className="text-[10px] text-zinc-300">Final: {finalScore.homeScore}-{finalScore.awayScore}</p>
+            )}
+            {finalScore && (
+              <p className={`text-[10px] font-black ${getPointsClass(points)}`} data-testid="past-points">{getPointsLabel(points)}</p>
+            )}
           </div>
 
           <div className="flex flex-col items-center gap-1">
