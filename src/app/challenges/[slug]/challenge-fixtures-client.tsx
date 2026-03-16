@@ -27,14 +27,14 @@ export function ChallengeFixturesClient({ fixtures }: { fixtures: ChallengeFixtu
 
   const upcomingFixtures = useMemo(
     () => fixtures
-      .filter((fixture) => isUpcomingFixture({ ...fixture, lifecycleStatus: undefined }))
+      .filter((fixture) => isUpcomingFixture(fixture))
       .sort((a, b) => +new Date(a.kickoff) - +new Date(b.kickoff)),
     [fixtures],
   );
 
   const pastFixtures = useMemo(
     () => fixtures
-      .filter((fixture) => isPastFixture({ ...fixture, lifecycleStatus: fixture.finalScore ? 'resolved' : undefined }))
+      .filter((fixture) => isPastFixture(fixture))
       .sort((a, b) => +new Date(b.kickoff) - +new Date(a.kickoff)),
     [fixtures],
   );
