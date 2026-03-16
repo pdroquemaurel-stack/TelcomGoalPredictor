@@ -1,17 +1,14 @@
 import { NextResponse } from 'next/server';
-import { FixtureState } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getAuthenticatedUser } from '@/lib/session-user';
 import { getTeamLogoUrl } from '@/lib/team-logo';
 import { calculateMatchOdds, filterOutCurrentUserPredictions, type ScorePrediction } from '@/lib/prediction-odds';
+import { getFixtureLifecycleStatus } from '@/lib/fixture-lifecycle';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const competitionId = searchParams.get('competitionId');
-
+export async function GET() {
   const user = await getAuthenticatedUser();
   const playerId = user?.id ?? '__anonymous__';
 
@@ -26,17 +23,25 @@ export async function GET(req: Request) {
     },
   });
 
-  const activeCompetitionId = competitionId ?? competitions[0]?.id;
-
   const fixtures = await prisma.fixture.findMany({
-    where: { predictionEnabled: true, visible: true, competitionId: activeCompetitionId },
+    where: {
+      visible: true,
+      competition: {
+        visible: true,
+        active: true,
+      },
+      OR: [
+        { predictionEnabled: true },
+        { predictions: { some: { userId: playerId } } },
+      ],
+    },
     include: {
       homeTeam: true,
       awayTeam: true,
       competition: true,
       predictions: { where: { userId: playerId }, take: 1 },
     },
-    orderBy: [{ utcKickoff: 'asc' }],
+    orderBy: [{ competition: { displayOrder: 'asc' } }, { utcKickoff: 'asc' }],
     take: 300,
   });
 
@@ -76,25 +81,32 @@ export async function GET(req: Request) {
         remainingMatches: Math.max(total - predicted, 0),
       };
     }),
-    activeCompetitionId,
     fixtures: fixtures.map((fixture) => {
       const savedPrediction = fixture.predictions[0] ?? null;
-      const isResolved = fixture.fixtureState === FixtureState.SETTLED;
-      const isLocked = fixture.fixtureState !== FixtureState.SCHEDULED;
+      const lifecycleStatus = getFixtureLifecycleStatus({
+        fixtureState: fixture.fixtureState,
+        utcKickoff: fixture.utcKickoff,
+        predictionEnabled: fixture.predictionEnabled,
+        homeScore: fixture.homeScore,
+        awayScore: fixture.awayScore,
+      });
+      const isResolved = lifecycleStatus === 'resolved';
 
       let state: 'open' | 'saved' | 'locked' | 'resolved' = 'open';
       if (isResolved) state = 'resolved';
-      else if (isLocked) state = 'locked';
+      else if (lifecycleStatus === 'live' || lifecycleStatus === 'locked') state = 'locked';
       else if (savedPrediction) state = 'saved';
 
       return {
         id: fixture.id,
         competitionId: fixture.competitionId,
+        fixtureState: fixture.fixtureState,
         home: fixture.homeTeam.name,
         homeLogoUrl: getTeamLogoUrl(fixture.homeTeam),
         away: fixture.awayTeam.name,
         awayLogoUrl: getTeamLogoUrl(fixture.awayTeam),
         kickoff: fixture.utcKickoff,
+        lifecycleStatus,
         competition: fixture.competition?.name ?? 'League Match',
         state,
         points: savedPrediction?.pointsAwarded ?? 0,
