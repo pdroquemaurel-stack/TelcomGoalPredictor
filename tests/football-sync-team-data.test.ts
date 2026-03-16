@@ -38,6 +38,36 @@ test('football-data fixtures expose full team metadata', async () => {
   }
 });
 
+test('football-data fixtures fallback to regularTime score when fullTime is missing', async () => {
+  const originalFetch = global.fetch;
+  global.fetch = (async () => ({
+    ok: true,
+    json: async () => ({
+      matches: [
+        {
+          id: 101,
+          competition: { id: 200 },
+          utcDate: '2026-03-14T20:00:00Z',
+          status: 'FINISHED',
+          homeTeam: { id: 1, name: 'Team Home' },
+          awayTeam: { id: 2, name: 'Team Away' },
+          score: { fullTime: { home: null, away: null }, regularTime: { home: 2, away: 0 } },
+        },
+      ],
+    }),
+  })) as any;
+
+  try {
+    const provider = new FootballDataProvider();
+    const fixtures = await provider.getFixtures({ from: '2026-03-14', to: '2026-03-14' });
+
+    assert.equal(fixtures[0].homeScore, 2);
+    assert.equal(fixtures[0].awayScore, 0);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
 test('team logo resolver uses crestUrl before local fallback', () => {
   assert.equal(getTeamLogoUrl({ name: 'Arsenal', crestUrl: 'https://crest/arsenal.png' }), 'https://crest/arsenal.png');
   assert.equal(getTeamLogoUrl({ name: 'Real Madrid' }), '/teams/real-madrid.png');

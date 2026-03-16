@@ -50,8 +50,8 @@ export class FootballDataProvider implements FootballProvider {
       awayTeamCrest: m.awayTeam?.crest ?? undefined,
       utcKickoff: m.utcDate,
       statusText: m.status,
-      homeScore: m.score?.fullTime?.home,
-      awayScore: m.score?.fullTime?.away,
+      homeScore: m.score?.fullTime?.home ?? m.score?.regularTime?.home,
+      awayScore: m.score?.fullTime?.away ?? m.score?.regularTime?.away,
     }));
   }
 
@@ -61,8 +61,8 @@ export class FootballDataProvider implements FootballProvider {
     return {
       externalId,
       statusText: data.match.status,
-      homeScore: data.match.score?.fullTime?.home,
-      awayScore: data.match.score?.fullTime?.away,
+      homeScore: data.match.score?.fullTime?.home ?? data.match.score?.regularTime?.home,
+      awayScore: data.match.score?.fullTime?.away ?? data.match.score?.regularTime?.away,
     };
   }
 }
