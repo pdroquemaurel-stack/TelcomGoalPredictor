@@ -36,7 +36,7 @@ export default async function HomePage() {
 
   const recapUpdate = await prisma.profile.updateMany({
     where: {
-      userId: profile.userId,
+      id: profile.id,
       OR: [
         { lastDailyRecapSeenAt: null },
         { lastDailyRecapSeenAt: { lt: todayRange.start } },
