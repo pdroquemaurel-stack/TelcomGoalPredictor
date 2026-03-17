@@ -137,10 +137,10 @@ export default async function AdminFixturesPage({ searchParams }: { searchParams
   return (
     <div className="space-y-4 text-black">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Matches</h1>
+        <h1 className="text-2xl font-bold">Matchs</h1>
         <div className="flex items-center gap-2">
-          <Link className="rounded border border-zinc-300 px-3 py-2 text-sm font-semibold" href="/admin/competitions">← Back to competitions</Link>
-          <Link className="rounded bg-brand px-3 py-2 text-sm font-bold text-black" href="/admin/fixtures?add=1">Add match</Link>
+          <Link className="rounded border border-zinc-300 px-3 py-2 text-sm font-semibold" href="/admin/competitions">← Retour compétitions</Link>
+          <Link className="rounded bg-brand px-3 py-2 text-sm font-bold text-black" href="/admin/fixtures?add=1">Ajouter un match</Link>
         </div>
       </div>
 
@@ -151,10 +151,10 @@ export default async function AdminFixturesPage({ searchParams }: { searchParams
             <select className="rounded border p-2" defaultValue={competitionId} name="competitionId" required>
               {competitions.map((competition) => <option key={competition.id} value={competition.id}>{competition.name}</option>)}
             </select>
-            <input className="rounded border p-2" name="home" placeholder="Home team" required />
-            <input className="rounded border p-2" name="away" placeholder="Away team" required />
+            <input className="rounded border p-2" name="home" placeholder="Équipe domicile" required />
+            <input className="rounded border p-2" name="away" placeholder="Équipe extérieur" required />
             <AdminDateTimePicker name="kickoff" required />
-            <button className="rounded bg-brand px-3 py-2 font-bold text-black" type="submit">Add match</button>
+            <button className="rounded bg-brand px-3 py-2 font-bold text-black" type="submit">Ajouter un match</button>
           </form>
         </div>
       )}
@@ -193,7 +193,7 @@ export default async function AdminFixturesPage({ searchParams }: { searchParams
                   <select name="fixtureState" className="rounded border p-2" defaultValue={fixture.fixtureState}>{Object.values(FixtureState).map((value) => <option key={value} value={value}>{value}</option>)}</select>
                   <select name="predictionEnabled" className="rounded border p-2" defaultValue={fixture.predictionEnabled ? 'true' : 'false'}><option value="true">Déverrouillé</option><option value="false">Verrouillé</option></select>
                   <select name="visible" className="rounded border p-2" defaultValue={fixture.visible ? 'true' : 'false'}><option value="true">Visible</option><option value="false">Masqué</option></select>
-                  <button className="rounded bg-black px-3 py-2 text-sm font-semibold text-white md:col-span-2" type="submit">Save</button>
+                  <button className="rounded bg-black px-3 py-2 text-sm font-semibold text-white md:col-span-2" type="submit">Enregistrer</button>
                 </form>
               )}
             </article>

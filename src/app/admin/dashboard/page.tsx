@@ -103,15 +103,15 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
 
   return (
     <div className="space-y-4 text-black">
-      <h1 className="text-2xl font-bold">Dashboard</h1>
-      <p className="text-sm text-slate-600">Pilotage admin : KPI pronostics + activité joueur/API.</p>
+      <h1 className="text-2xl font-bold">Dashboard admin</h1>
+      <p className="text-sm text-slate-600">Vue rapide des indicateurs clés pour piloter le MVP (joueurs, pronostics, activité API).</p>
 
       <div className="grid gap-3 md:grid-cols-3">
-        <div className="rounded-2xl bg-white p-4"><p className="text-xs uppercase text-slate-500">Total predictions</p><p className="mt-1 text-2xl font-bold">{predictions}</p></div>
-        <div className="rounded-2xl bg-white p-4"><p className="text-xs uppercase text-slate-500">Exact predictions</p><p className="mt-1 text-2xl font-bold">{exactPredictions}</p></div>
-        <div className="rounded-2xl bg-white p-4"><p className="text-xs uppercase text-slate-500">Correct outcome predictions</p><p className="mt-1 text-2xl font-bold">{correctOutcomePredictions}</p></div>
-        <div className="rounded-2xl bg-white p-4"><p className="text-xs uppercase text-slate-500">Predictions on unfinished matches</p><p className="mt-1 text-2xl font-bold">{unfinishedPredictions}</p></div>
-        <div className="rounded-2xl bg-white p-4"><p className="text-xs uppercase text-slate-500">Total users</p><p className="mt-1 text-2xl font-bold">{users}</p></div>
+        <div className="rounded-2xl bg-white p-4"><p className="text-xs uppercase text-slate-500">Pronostics totaux</p><p className="mt-1 text-2xl font-bold">{predictions}</p></div>
+        <div className="rounded-2xl bg-white p-4"><p className="text-xs uppercase text-slate-500">Scores exacts</p><p className="mt-1 text-2xl font-bold">{exactPredictions}</p></div>
+        <div className="rounded-2xl bg-white p-4"><p className="text-xs uppercase text-slate-500">Bons résultats</p><p className="mt-1 text-2xl font-bold">{correctOutcomePredictions}</p></div>
+        <div className="rounded-2xl bg-white p-4"><p className="text-xs uppercase text-slate-500">Pronos sur matchs non terminés</p><p className="mt-1 text-2xl font-bold">{unfinishedPredictions}</p></div>
+        <div className="rounded-2xl bg-white p-4"><p className="text-xs uppercase text-slate-500">Utilisateurs totaux</p><p className="mt-1 text-2xl font-bold">{users}</p></div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-white p-3 text-sm">
@@ -133,6 +133,13 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
             </Link>
           ))}
         </div>
+      </div>
+
+
+
+      <div className="flex flex-wrap gap-2">
+        <Link className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800" href="/admin/fixtures">Gérer les matchs</Link>
+        <Link className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800" href="/admin/operations">Aller à Sync & opérations</Link>
       </div>
 
       <AdminAnalyticsChart activity={activity} />
