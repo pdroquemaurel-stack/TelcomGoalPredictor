@@ -225,6 +225,7 @@ model Competition {
   fixtures              Fixture[]
   campaigns             SponsorCampaign[]
   challengeCompetitions ChallengeCompetition[]
+  featuredInConfigs      AppConfig[]
 
   @@index([active, visible])
 }
@@ -455,6 +456,37 @@ model ThemeConfig {
   sponsorLogoZoneUrl String?
   updatedAt          DateTime @updatedAt
   createdAt          DateTime @default(now())
+}
+
+model AppConfig {
+  id                          String   @id @default(cuid())
+  singletonKey                String   @unique @default("default")
+  appName                     String   @default("Telcom Goal Predictor")
+  appTagline                  String   @default("Prédisez. Jouez. Gagnez.")
+  welcomeMessage              String   @default("Bienvenue sur votre zone de pronostics quotidienne.")
+  homeBannerMessage           String   @default("De nouveaux matchs arrivent chaque jour.")
+  featuredCompetitionId       String?
+  showChallengesBlock         Boolean  @default(true)
+  showLeaderboardBlock        Boolean  @default(true)
+  showShopBlock               Boolean  @default(true)
+  dailyFutureDays             Int      @default(2)
+  dailyPastDays               Int      @default(2)
+  includeLiveFixturesInDaily  Boolean  @default(false)
+  maxDailyFixtures            Int      @default(200)
+  dailyAutoUseEnabledCompetitions Boolean @default(true)
+  primaryColor                String   @default("#ff7900")
+  secondaryColor              String   @default("#000000")
+  ctaColor                    String   @default("#ff7900")
+  backgroundColor             String   @default("#000000")
+  cardColor                   String   @default("#09090b")
+  textColor                   String   @default("#ffffff")
+  logoUrl                     String?
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @updatedAt
+
+  featuredCompetition Competition? @relation(fields: [featuredCompetitionId], references: [id])
+
+  @@index([featuredCompetitionId])
 }
 
 model AuditLog {

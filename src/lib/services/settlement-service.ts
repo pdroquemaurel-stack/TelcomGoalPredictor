@@ -63,17 +63,24 @@ async function rebuildProfileTotals(userId: string, prismaClient: PrismaClient) 
   });
 }
 
-export async function settleFinishedFixtures(prismaClient: PrismaClient = prisma) {
-  const candidateFixtures = await prismaClient.fixture.findMany({
-    where: {
-      fixtureState: { in: [FixtureState.SCHEDULED, FixtureState.LIVE, FixtureState.FINISHED] },
-      homeScore: { not: null },
-      awayScore: { not: null },
-    },
+
+export async function settleFixturesByIds(fixtureIds: string[], prismaClient: PrismaClient = prisma) {
+  if (!fixtureIds.length) {
+    return { settledFixturesCount: 0, updatedPredictionsCount: 0, impactedUsersCount: 0 };
+  }
+
+  const originalCandidates = await prismaClient.fixture.findMany({
+    where: { id: { in: fixtureIds } },
     include: { predictions: true },
-    orderBy: { utcKickoff: 'asc' },
   });
 
+  return settleCandidateFixtures(originalCandidates, prismaClient);
+}
+
+async function settleCandidateFixtures(
+  candidateFixtures: Array<{ id: string; statusText: string; homeScore: number | null; awayScore: number | null; fixtureState: FixtureState; predictions: Array<{ id: string; userId: string; homeScore: number; awayScore: number; pointsAwarded: number }> }>,
+  prismaClient: PrismaClient,
+) {
   let settledFixturesCount = 0;
   let updatedPredictionsCount = 0;
   const impactedUserIds = new Set<string>();
@@ -129,4 +136,18 @@ export async function settleFinishedFixtures(prismaClient: PrismaClient = prisma
     updatedPredictionsCount,
     impactedUsersCount: impactedUserIds.size,
   };
+}
+
+export async function settleFinishedFixtures(prismaClient: PrismaClient = prisma) {
+  const candidateFixtures = await prismaClient.fixture.findMany({
+    where: {
+      fixtureState: { in: [FixtureState.SCHEDULED, FixtureState.LIVE, FixtureState.FINISHED] },
+      homeScore: { not: null },
+      awayScore: { not: null },
+    },
+    include: { predictions: true },
+    orderBy: { utcKickoff: 'asc' },
+  });
+
+  return settleCandidateFixtures(candidateFixtures, prismaClient);
 }
