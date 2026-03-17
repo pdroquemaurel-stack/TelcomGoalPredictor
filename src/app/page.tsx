@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import recapBackground from '../../backgrounds/daily-recap-pitch.png';
+
 import { prisma } from '@/lib/prisma';
 import { requireOnboardedUser } from '@/lib/player-access';
 
@@ -115,7 +115,7 @@ export default async function HomePage() {
     <main className="relative h-dvh w-full overflow-hidden">
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: `url(${recapBackground.src})` }}
+        style={{ backgroundImage: "url('/backgrounds/daily-recap-pitch.webp')" }}
         aria-hidden
       />
       <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/70 to-black/90" aria-hidden />
