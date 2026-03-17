@@ -80,8 +80,8 @@ export default function AdminOperationsPage() {
   return (
     <div className="space-y-6 text-black">
       <div className="rounded-2xl bg-white p-4">
-        <h1 className="text-2xl font-bold">Centre des opérations</h1>
-        <p className="text-sm text-slate-600">Pilote la synchronisation, surveille les KPI système et corrige rapidement les matchs problématiques.</p>
+        <h1 className="text-2xl font-bold">Operations center</h1>
+        <p className="text-sm text-slate-600">Pilotage sync + KPIs système + détection rapide des fixtures problématiques.</p>
       </div>
 
       {summary && (

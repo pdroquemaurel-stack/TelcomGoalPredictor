@@ -52,10 +52,10 @@ export default async function ProfilePage() {
 
   return (
     <main className="mx-auto max-w-md space-y-4 px-4 pb-28 pt-5">
-      <header className="ui-page-header">
+      <header className="rounded-3xl bg-white p-5 text-black shadow-xl">
         <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-600">Profil joueur</p>
-        <h1 className="mt-1 text-3xl font-black">{profile?.displayName ?? 'Joueur'}</h1>
-        <p className="mt-1 text-sm font-semibold">@{profile?.user.username ?? 'joueur'} • Niveau {profile?.level ?? 'Rookie'}</p>
+        <h1 className="mt-1 text-3xl font-black">{profile?.displayName ?? 'Player'}</h1>
+        <p className="mt-1 text-sm font-semibold">@{profile?.user.username ?? 'player'} • Niveau {profile?.level ?? 'Rookie'}</p>
       </header>
 
       <StreakDots streak={streak} />

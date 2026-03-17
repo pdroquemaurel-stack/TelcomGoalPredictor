@@ -39,7 +39,7 @@ export function PredictionsClient() {
       const data = await res.json();
 
       if (!res.ok) {
-        setMessage(data?.error?.message ?? 'Impossible de charger les matchs pour le moment.');
+        setMessage(`❌ ${data?.error?.message ?? 'Erreur de chargement des matchs.'}`);
         setLoading(false);
         return;
       }
@@ -72,12 +72,12 @@ export function PredictionsClient() {
   return (
     <main className="mx-auto max-w-md space-y-4 px-4 pb-28 pt-5">
       <header className="rounded-3xl bg-brand p-5 text-black">
-        <p className="text-xs font-black uppercase tracking-[0.18em]">Prédictions</p>
-        <h1 className="mt-1 text-2xl font-black">Parcours principal: pronostiquer les matchs à venir</h1>
+        <p className="text-xs font-black uppercase tracking-[0.18em]">Pronos</p>
+        <h1 className="mt-1 text-2xl font-black">Tous les matchs visibles</h1>
         <p className="mt-1 text-sm font-bold">{savedUpcomingPredictionsCount} pronostic(s) enregistré(s) / {availablePredictionsCount}</p>
       </header>
 
-      <section className="ui-banner ui-banner-info">
+      <section className="card border-brand bg-brand/10 text-sm">
         <p className="font-black">Barème: 3 pts score exact • 1 pt bon résultat • 0 pt sinon.</p>
       </section>
 
@@ -88,14 +88,14 @@ export function PredictionsClient() {
       </section>
 
 
-      {message && <p className="ui-banner ui-banner-error">{message}</p>}
+      {message && <p className="rounded-2xl border border-brand bg-brand/10 px-4 py-3 text-sm font-semibold text-orange-100">{message}</p>}
       {loading && <section className="card text-sm text-zinc-300">Chargement des matchs...</section>}
 
       {!loading && groupedFixtures.length === 0 && (
-        <section className="ui-empty-state">
+        <section className="card text-sm text-zinc-300">
           {tab === 'upcoming'
-            ? 'Aucun match ouvert aux pronostics pour le moment.'
-            : 'Aucun match terminé à afficher pour le moment.'}
+            ? 'Aucun match non terminé pour le moment.'
+            : 'Aucun pronostic passé pour le moment.'}
         </section>
       )}
 

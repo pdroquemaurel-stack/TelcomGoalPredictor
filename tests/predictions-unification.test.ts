@@ -79,9 +79,9 @@ test('daily page redirects to unified predictions page', async () => {
   assert.match(dailyPage, /redirect\('\/predictions'\)/);
 });
 
-test('bottom navigation points Pronos to predictions page', async () => {
+test('bottom navigation points Pronos du jour to predictions page', async () => {
   const nav = await fs.readFile('src/components/player-nav.tsx', 'utf8');
-  assert.match(nav, /\['\/predictions', 'Pronos'\]/);
+  assert.match(nav, /\['\/predictions', 'Pronos du jour'\]/);
 });
 
 test('predictions and challenge pages use shared fixture filters with expected sorting direction', async () => {
