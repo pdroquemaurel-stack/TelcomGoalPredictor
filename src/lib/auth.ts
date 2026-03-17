@@ -30,4 +30,10 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
+  events: {
+    async signIn({ user }) {
+      if (!user.id) return;
+      await prisma.loginActivity.create({ data: { userId: user.id } });
+    },
+  },
 };

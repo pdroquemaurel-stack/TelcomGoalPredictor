@@ -3,12 +3,13 @@ import { prisma } from '@/lib/prisma';
 import { requireOnboardedUser } from '@/lib/player-access';
 import { LogoutButton } from '@/components/logout-button';
 import { calculatePredictionActivityStreak } from '@/lib/profile-streak';
+import { resolveBadgeImagePath } from '@/lib/badge-image';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 function StreakDots({ streak }: { streak: number }) {
-  const displayed = Math.min(streak, 7);
+  const displayed = Math.max(1, Math.min(streak, 7));
 
   return (
     <section className="card">
@@ -38,7 +39,7 @@ export default async function ProfilePage() {
         country: true,
       },
     }),
-    prisma.badge.findMany({ orderBy: { name: 'asc' } }),
+    prisma.badge.findMany({ where: { isActive: true }, orderBy: [{ displayOrder: 'asc' }, { threshold: 'asc' }, { name: 'asc' }] }),
     prisma.prediction.findMany({ where: { userId: me.id }, select: { createdAt: true } }),
   ]);
 
@@ -90,7 +91,7 @@ export default async function ProfilePage() {
             {orderedBadges.map(({ badge, earned }) => (
               <article key={badge.id} className={`min-w-[190px] snap-start rounded-2xl border p-3 ${earned ? 'border-brand/60 bg-zinc-900' : 'border-white/10 bg-zinc-900/60 opacity-60'}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img alt={badge.name} className="h-16 w-16 rounded-xl object-cover" src={`/badges/${badge.code}.webp`} />
+                <img alt={badge.name} className="h-16 w-16 rounded-xl object-cover" src={resolveBadgeImagePath(badge.slug)} />
                 <p className="mt-2 text-sm font-black">{badge.name}</p>
                 <p className="mt-1 text-xs text-zinc-300">{badge.description}</p>
                 <p className={`mt-2 text-[11px] font-black ${earned ? 'text-emerald-400' : 'text-zinc-400'}`}>{earned ? 'Obtenu' : 'À débloquer'}</p>

@@ -5,14 +5,20 @@
 :root {
   --brand-primary: #ff7900;
   --brand-secondary: #000000;
+  --brand-cta: #ff7900;
+  --app-bg: #000000;
+  --app-card: #09090b;
+  --app-text: #ffffff;
 }
 
 body {
-  @apply bg-black text-white;
+  background: var(--app-bg);
+  color: var(--app-text);
 }
 
 .card {
-  @apply rounded-3xl border border-white/10 bg-zinc-950 p-4 shadow-lg shadow-black/40;
+  @apply rounded-3xl border border-white/10 p-4 shadow-lg shadow-black/40;
+  background: var(--app-card);
 }
 
 .section-title {
@@ -24,5 +30,7 @@ body {
 }
 
 .cta-primary {
-  @apply rounded-2xl bg-brand px-5 py-3 text-sm font-black text-black shadow-lg shadow-orange-500/40;
+  @apply rounded-2xl px-5 py-3 text-sm font-black text-black shadow-lg;
+  background: var(--brand-cta);
+  box-shadow: 0 10px 20px color-mix(in oklab, var(--brand-cta) 40%, black 60%);
 }

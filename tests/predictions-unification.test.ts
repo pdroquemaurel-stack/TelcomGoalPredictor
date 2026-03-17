@@ -4,12 +4,12 @@ import fs from 'node:fs/promises';
 import { isPastFixture, isUpcomingFixture } from '@/lib/predictions-fixture-filters';
 import { getFixtureLifecycleStatus } from '@/lib/fixture-lifecycle';
 
-test('upcoming fixtures include future scheduled and live, but not stale old or finished fixtures', () => {
+test('upcoming fixtures include all non-finished fixtures (future, live, already started)', () => {
   const now = +new Date('2026-03-16T12:00:00.000Z');
 
   assert.equal(isUpcomingFixture({ fixtureState: 'SCHEDULED', kickoff: '2026-03-17T12:00:00.000Z', savedPrediction: null }, now), true);
   assert.equal(isUpcomingFixture({ fixtureState: 'LIVE', kickoff: '2026-03-16T10:00:00.000Z', savedPrediction: null }, now), true);
-  assert.equal(isUpcomingFixture({ fixtureState: 'SCHEDULED', kickoff: '2026-03-13T12:00:00.000Z', savedPrediction: null }, now), false);
+  assert.equal(isUpcomingFixture({ fixtureState: 'SCHEDULED', kickoff: '2026-03-13T12:00:00.000Z', savedPrediction: null }, now), true);
   assert.equal(isUpcomingFixture({ fixtureState: 'FINISHED', kickoff: '2026-03-16T11:00:00.000Z', savedPrediction: null }, now), false);
   assert.equal(isUpcomingFixture({ fixtureState: 'SETTLED', kickoff: '2026-03-16T11:00:00.000Z', savedPrediction: null }, now), false);
 });
@@ -47,11 +47,11 @@ test('live fixture remains visible in upcoming tab but is rendered locked for ed
   assert.match(endpoint, /lifecycleStatus === 'live' \|\| lifecycleStatus === 'locked'/);
 });
 
-test('past fixtures include predicted past fixtures even without final score, and exclude non-predicted fixtures', () => {
+test('past fixtures include resolved predicted fixtures and exclude unresolved entries', () => {
   const now = +new Date('2026-03-16T21:00:00.000Z');
 
   assert.equal(isPastFixture({ fixtureState: 'FINISHED', lifecycleStatus: 'resolved', kickoff: '2026-03-16T20:30:00.000Z', savedPrediction: { homeScore: 1, awayScore: 0 } }, now), true);
-  assert.equal(isPastFixture({ fixtureState: 'SCHEDULED', kickoff: '2026-03-16T17:00:00.000Z', savedPrediction: { homeScore: 2, awayScore: 1 }, finalScore: null }, now), true);
+  assert.equal(isPastFixture({ fixtureState: 'SCHEDULED', kickoff: '2026-03-16T17:00:00.000Z', savedPrediction: { homeScore: 2, awayScore: 1 }, finalScore: null }, now), false);
   assert.equal(isPastFixture({ fixtureState: 'FINISHED', kickoff: '2026-03-16T20:30:00.000Z', savedPrediction: null }, now), false);
   assert.equal(isPastFixture({ fixtureState: 'LIVE', kickoff: '2026-03-16T20:00:00.000Z', savedPrediction: { homeScore: 0, awayScore: 0 } }, now), false);
 });
@@ -70,8 +70,8 @@ test('upcoming and past fixture filters stay mutually consistent for predictions
   const upcomingIds = fixtures.filter((fixture) => isUpcomingFixture(fixture, now)).map((fixture) => fixture.id);
   const pastIds = fixtures.filter((fixture) => isPastFixture(fixture, now)).map((fixture) => fixture.id);
 
-  assert.deepEqual(upcomingIds, ['future', 'live']);
-  assert.deepEqual(pastIds, ['stale', 'resolved']);
+  assert.deepEqual(upcomingIds, ['future', 'live', 'stale']);
+  assert.deepEqual(pastIds, ['resolved']);
 });
 
 test('daily page redirects to unified predictions page', async () => {

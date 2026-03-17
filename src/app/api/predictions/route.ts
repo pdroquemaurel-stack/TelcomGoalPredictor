@@ -5,6 +5,8 @@ import { prisma } from '@/lib/prisma';
 import { apiError, apiSuccess } from '@/lib/api';
 import { canSubmitPrediction } from '@/lib/services/prediction-rules';
 import { getSessionUserId } from '@/lib/auth-session';
+import { assignBadgesForUser } from '@/lib/services/badge-service';
+import { trackApiRequest } from '@/lib/api-analytics';
 
 
 const schema = z.object({
@@ -18,6 +20,9 @@ export async function POST(req: Request) {
     const session = await getServerSession(authOptions);
     const userId = getSessionUserId(session);
     if (!userId) return apiError('UNAUTHORIZED', 'Authentication required.', 401);
+
+    const profile = await prisma.profile.findUnique({ where: { userId }, include: { country: true } });
+    await trackApiRequest('/api/predictions', profile?.country?.code ?? null);
 
     const parsed = schema.safeParse(await req.json());
     if (!parsed.success) {
@@ -49,6 +54,8 @@ export async function POST(req: Request) {
         awayScore: parsed.data.awayScore,
       },
     });
+
+    await assignBadgesForUser(userId, prisma);
 
     return apiSuccess({ prediction });
   } catch (error) {

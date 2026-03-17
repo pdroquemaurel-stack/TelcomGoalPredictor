@@ -66,7 +66,7 @@ export function PredictionsClient() {
   );
 
   const groupedFixtures = groupFixturesByDay(tab === 'upcoming' ? upcomingFixtures : pastFixtures);
-  const availablePredictionsCount = upcomingFixtures.length;
+  const availablePredictionsCount = upcomingFixtures.filter((fixture) => fixture.state === 'open' || fixture.state === 'saved').length;
   const savedUpcomingPredictionsCount = upcomingFixtures.filter((fixture) => Boolean(fixture.savedPrediction)).length;
 
   return (
@@ -94,7 +94,7 @@ export function PredictionsClient() {
       {!loading && groupedFixtures.length === 0 && (
         <section className="card text-sm text-zinc-300">
           {tab === 'upcoming'
-            ? 'Aucun match à pronostiquer pour le moment.'
+            ? 'Aucun match non terminé pour le moment.'
             : 'Aucun pronostic passé pour le moment.'}
         </section>
       )}

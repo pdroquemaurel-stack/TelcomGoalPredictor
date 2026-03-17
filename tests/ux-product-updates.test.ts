@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { calculatePredictionActivityStreak } from '@/lib/profile-streak';
-import { isBadgeEarned } from '@/lib/badge-rules';
+import { BadgeCriterionType } from '@prisma/client';
+import { isBadgeEarned } from '@/lib/badges';
 
 test('signin page has no prefilled credentials and includes password visibility toggle', async () => {
   const signin = await fs.readFile('src/app/auth/signin/page.tsx', 'utf8');
@@ -48,8 +49,8 @@ test('streak helper caps display source with consecutive day logic', () => {
 });
 
 test('badge rules support total, winning and exact prediction thresholds', () => {
-  const progress = { totalPredictions: 12, winningPredictions: 6, exactPredictions: 2 };
-  assert.equal(isBadgeEarned({ type: 'total_predictions', threshold: 10 }, progress), true);
-  assert.equal(isBadgeEarned({ type: 'winning_predictions', threshold: 7 }, progress), false);
-  assert.equal(isBadgeEarned({ type: 'exact_predictions', threshold: 2 }, progress), true);
+  const progress = { predictionCount: 12, correctPredictionCount: 6, exactPredictionCount: 2 };
+  assert.equal(isBadgeEarned(BadgeCriterionType.PREDICTION_COUNT, 10, progress), true);
+  assert.equal(isBadgeEarned(BadgeCriterionType.CORRECT_PREDICTION_COUNT, 7, progress), false);
+  assert.equal(isBadgeEarned(BadgeCriterionType.EXACT_PREDICTION_COUNT, 2, progress), true);
 });
