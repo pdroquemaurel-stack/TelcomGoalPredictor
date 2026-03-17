@@ -82,6 +82,18 @@ export default async function HomePage() {
         <p className="text-xs text-zinc-300">{hasOpen ? 'Des matchs sont disponibles aujourd’hui.' : 'Pas de match ouvert actuellement.'}</p>
       </section>}
 
+      {config.showLeaderboardBlock && <section className="card">
+        <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-300">Classement</p>
+        <p className="mt-2 text-sm text-zinc-100">Compare ta progression avec les autres joueurs.</p>
+        <Link href="/leaderboards" className="mt-3 inline-block text-sm font-bold text-brand">Voir le leaderboard →</Link>
+      </section>}
+
+      {config.showShopBlock && <section className="card">
+        <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-300">Boutique</p>
+        <p className="mt-2 text-sm text-zinc-100">Boosters et avantages sponsorisés disponibles.</p>
+        <Link href="/shop" className="mt-3 inline-block text-sm font-bold text-brand">Ouvrir le shop →</Link>
+      </section>}
+
       <PlayerNav />
     </main>
   );

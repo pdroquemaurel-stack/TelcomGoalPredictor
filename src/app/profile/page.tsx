@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 function StreakDots({ streak }: { streak: number }) {
-  const displayed = Math.min(streak, 7);
+  const displayed = Math.max(1, Math.min(streak, 7));
 
   return (
     <section className="card">

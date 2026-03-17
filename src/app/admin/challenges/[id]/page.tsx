@@ -1,8 +1,8 @@
 import { notFound } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
-import { ChallengeCompletionMode, ChallengeType } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { ensureChallengeFixtureLinks } from '@/lib/services/challenge-service';
+import { ChallengeTypeFields } from '@/components/challenge-type-fields';
 import { formatMatchDateTime } from '@/lib/date-format';
 
 async function updateChallenge(formData: FormData) {
@@ -16,8 +16,8 @@ async function updateChallenge(formData: FormData) {
   const description = String(formData.get('description') ?? '').trim();
   const reward = String(formData.get('reward') ?? '').trim();
   const isActive = String(formData.get('isActive') ?? '') === 'on';
-  const challengeType = String(formData.get('challengeType') ?? ChallengeType.RANKING) as ChallengeType;
-  const completionMode = String(formData.get('completionMode') ?? '') as ChallengeCompletionMode;
+  const challengeType = String(formData.get('challengeType') ?? 'RANKING') as 'RANKING' | 'COMPLETION';
+  const completionMode = String(formData.get('completionMode') ?? '') as 'CORRECT' | 'EXACT';
   const completionTarget = Number(formData.get('completionTarget') ?? 0);
 
   if (!id || !name || !competitionIds.length || !startDate || !endDate) return;
@@ -33,8 +33,8 @@ async function updateChallenge(formData: FormData) {
       reward: reward || null,
       isActive,
       challengeType,
-      completionMode: challengeType === ChallengeType.COMPLETION ? completionMode || ChallengeCompletionMode.CORRECT : null,
-      completionTarget: challengeType === ChallengeType.COMPLETION && completionTarget > 0 ? completionTarget : null,
+      completionMode: challengeType === 'COMPLETION' ? completionMode || 'CORRECT' : null,
+      completionTarget: challengeType === 'COMPLETION' && completionTarget > 0 ? completionTarget : null,
     },
   });
 
@@ -100,15 +100,7 @@ export default async function AdminChallengeDetailPage({ params }: { params: { i
         </div>
         <label className="rounded border p-2 text-sm">Début <input className="w-full" type="date" name="startDate" defaultValue={new Date(challenge.startDate).toISOString().slice(0, 10)} required /></label>
         <label className="rounded border p-2 text-sm">Fin <input className="w-full" type="date" name="endDate" defaultValue={new Date(challenge.endDate).toISOString().slice(0, 10)} required /></label>
-        <select name="challengeType" className="rounded border p-2" defaultValue={challenge.challengeType}>
-          <option value={ChallengeType.RANKING}>Ranking</option>
-          <option value={ChallengeType.COMPLETION}>Completion</option>
-        </select>
-        <select name="completionMode" className="rounded border p-2" defaultValue={challenge.completionMode ?? ChallengeCompletionMode.CORRECT}>
-          <option value={ChallengeCompletionMode.CORRECT}>Completion sur bon résultat</option>
-          <option value={ChallengeCompletionMode.EXACT}>Completion sur score exact</option>
-        </select>
-        <input name="completionTarget" defaultValue={challenge.completionTarget ?? ''} type="number" min={1} className="rounded border p-2" placeholder="Objectif (X matchs)" />
+        <ChallengeTypeFields challengeType={challenge.challengeType} completionMode={challenge.completionMode} completionTarget={challenge.completionTarget} />
         <input name="reward" defaultValue={challenge.reward ?? ''} className="rounded border p-2" placeholder="Récompense" />
         <textarea name="description" defaultValue={challenge.description ?? ''} className="rounded border p-2 md:col-span-2" />
         <label className="flex items-center gap-2 text-sm font-semibold"><input defaultChecked={challenge.isActive} name="isActive" type="checkbox" /> Actif</label>

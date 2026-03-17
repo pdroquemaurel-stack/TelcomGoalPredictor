@@ -4,6 +4,8 @@ import { getAuthenticatedUser } from '@/lib/session-user';
 import { getTeamLogoUrl } from '@/lib/team-logo';
 import { calculateMatchOdds, filterOutCurrentUserPredictions, type ScorePrediction } from '@/lib/prediction-odds';
 import { getFixtureLifecycleStatus } from '@/lib/fixture-lifecycle';
+import { getAppConfig } from '@/lib/app-config';
+import { trackApiRequest } from '@/lib/api-analytics';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -11,6 +13,16 @@ export const revalidate = 0;
 export async function GET() {
   const user = await getAuthenticatedUser();
   const playerId = user?.id ?? '__anonymous__';
+  const [config, profile] = await Promise.all([
+    getAppConfig(),
+    user?.id
+      ? prisma.profile.findUnique({ where: { userId: user.id }, include: { country: true } })
+      : Promise.resolve(null),
+  ]);
+
+  const endRange = new Date();
+  endRange.setHours(0, 0, 0, 0);
+  endRange.setDate(endRange.getDate() + Math.max(1, config.dailyFutureDays));
 
   const competitions = await prisma.competition.findMany({
     where: { visible: true, active: true },
@@ -31,7 +43,10 @@ export async function GET() {
         active: true,
       },
       OR: [
-        { predictionEnabled: true },
+        {
+          fixtureState: { in: ['SCHEDULED', 'LIVE'] },
+          utcKickoff: { lt: endRange },
+        },
         { predictions: { some: { userId: playerId } } },
       ],
     },
@@ -67,6 +82,8 @@ export async function GET() {
     current.push({ homeScore: prediction.homeScore, awayScore: prediction.awayScore });
     predictionsByFixtureId.set(prediction.fixtureId, current);
   });
+
+  await trackApiRequest('/api/public/fixtures', profile?.country?.code ?? null);
 
   return NextResponse.json({
     competitions: competitions.map((competition) => {

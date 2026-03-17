@@ -44,7 +44,6 @@ async function saveSettings(formData: FormData) {
       dailyFutureDays,
       dailyPastDays,
       includeLiveFixturesInDaily: toBoolean(formData.get('includeLiveFixturesInDaily')),
-      dailyAutoUseEnabledCompetitions: toBoolean(formData.get('dailyAutoUseEnabledCompetitions')),
       maxDailyFixtures,
       logoUrl: String(formData.get('logoUrl') ?? '').trim() || null,
       ...colors,
@@ -71,24 +70,23 @@ export default async function AdminSettingsPage() {
           <label className="text-sm font-semibold">Tagline<input name="appTagline" className="mt-1 w-full rounded border p-2" defaultValue={config.appTagline} /></label>
           <label className="text-sm font-semibold md:col-span-2">Message accueil<input name="welcomeMessage" className="mt-1 w-full rounded border p-2" defaultValue={config.welcomeMessage} /></label>
           <label className="text-sm font-semibold md:col-span-2">Bannière home<input name="homeBannerMessage" className="mt-1 w-full rounded border p-2" defaultValue={config.homeBannerMessage} /></label>
-          <label className="text-sm font-semibold">Compétition vedette
+          <label className="text-sm font-semibold">Compétition mise en avant (feed home/daily)
             <select name="featuredCompetitionId" className="mt-1 w-full rounded border p-2" defaultValue={config.featuredCompetitionId ?? ''}>
               <option value="">Aucune</option>
               {competitions.map((competition) => <option key={competition.id} value={competition.id}>{competition.name}</option>)}
             </select>
           </label>
-          <label className="text-sm font-semibold">Logo URL<input name="logoUrl" className="mt-1 w-full rounded border p-2" defaultValue={config.logoUrl ?? ''} /></label>
+          <label className="text-sm font-semibold">Logo URL (branding, en réserve)<input name="logoUrl" className="mt-1 w-full rounded border p-2" defaultValue={config.logoUrl ?? ''} /><span className="mt-1 block text-xs font-normal text-slate-500">Stocké pour le branding opérateur. Non affiché dans les écrans joueurs actuels.</span></label>
         </div>
 
         <div className="grid gap-3 md:grid-cols-3">
-          <label className="text-sm font-semibold">Future days<input type="number" min={1} max={7} name="dailyFutureDays" className="mt-1 w-full rounded border p-2" defaultValue={config.dailyFutureDays} /></label>
+          <label className="text-sm font-semibold">Future days (fenêtre /predictions)<input type="number" min={1} max={7} name="dailyFutureDays" className="mt-1 w-full rounded border p-2" defaultValue={config.dailyFutureDays} /></label>
           <label className="text-sm font-semibold">Past days<input type="number" min={0} max={7} name="dailyPastDays" className="mt-1 w-full rounded border p-2" defaultValue={config.dailyPastDays} /></label>
           <label className="text-sm font-semibold">Max fixtures<input type="number" min={10} max={300} name="maxDailyFixtures" className="mt-1 w-full rounded border p-2" defaultValue={config.maxDailyFixtures} /></label>
         </div>
 
         <div className="grid gap-2 text-sm md:grid-cols-2">
           <label><input type="checkbox" name="includeLiveFixturesInDaily" defaultChecked={config.includeLiveFixturesInDaily} /> Inclure les matchs live dans le daily feed</label>
-          <label><input type="checkbox" name="dailyAutoUseEnabledCompetitions" defaultChecked={config.dailyAutoUseEnabledCompetitions} /> Utiliser automatiquement les compétitions daily-enabled</label>
           <label><input type="checkbox" name="showChallengesBlock" defaultChecked={config.showChallengesBlock} /> Afficher bloc challenges</label>
           <label><input type="checkbox" name="showLeaderboardBlock" defaultChecked={config.showLeaderboardBlock} /> Afficher bloc leaderboard</label>
           <label><input type="checkbox" name="showShopBlock" defaultChecked={config.showShopBlock} /> Afficher bloc shop</label>

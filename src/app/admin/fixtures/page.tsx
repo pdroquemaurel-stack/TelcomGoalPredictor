@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import { FixtureState } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { AdminDateTimePicker } from '@/components/admin-datetime-picker';
@@ -66,6 +67,7 @@ async function updateFixture(formData: FormData) {
   const predictionEnabled = String(formData.get('predictionEnabled') ?? 'true') === 'true';
   const homeScoreRaw = String(formData.get('homeScore') ?? '').trim();
   const awayScoreRaw = String(formData.get('awayScore') ?? '').trim();
+  const returnTo = String(formData.get('returnTo') ?? '/admin/fixtures');
 
   await prisma.fixture.update({
     where: { id },
@@ -89,6 +91,7 @@ async function updateFixture(formData: FormData) {
   revalidatePath('/admin/fixtures');
   revalidatePath('/predictions');
   revalidatePath('/results');
+  redirect(returnTo || '/admin/fixtures');
 }
 
 export default async function AdminFixturesPage({ searchParams }: { searchParams?: { competitionId?: string | string[]; q?: string | string[]; state?: string | string[]; day?: string | string[]; sort?: string | string[]; edit?: string | string[]; add?: string | string[] } }) {
@@ -183,6 +186,7 @@ export default async function AdminFixturesPage({ searchParams }: { searchParams
               {isEditing && (
                 <form action={updateFixture} className="mt-3 grid gap-2 rounded-xl bg-white/90 p-3 md:grid-cols-6">
                   <input type="hidden" name="id" value={fixture.id} />
+                  <input type="hidden" name="returnTo" value={`/admin/fixtures?${new URLSearchParams({ ...(competitionId ? { competitionId } : {}), ...(query ? { q: query } : {}), ...(selectedState ? { state: selectedState } : {}), ...(day ? { day } : {}), sort }).toString()}`} />
                   <input type="datetime-local" name="kickoff" className="rounded border p-2 md:col-span-2" defaultValue={fixture.utcKickoff.toISOString().slice(0, 16)} />
                   <input name="homeScore" className="rounded border p-2" defaultValue={fixture.homeScore ?? ''} placeholder="Score domicile" />
                   <input name="awayScore" className="rounded border p-2" defaultValue={fixture.awayScore ?? ''} placeholder="Score extérieur" />
