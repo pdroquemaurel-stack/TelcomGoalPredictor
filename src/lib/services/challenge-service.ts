@@ -5,7 +5,6 @@ import { buildChallengeLeaderboard } from '@/lib/services/challenge-leaderboard'
 export function getActiveChallengesFilter(now = new Date()) {
   return {
     isActive: true,
-    startDate: { lte: now },
     endDate: { gte: now },
   };
 }
@@ -105,6 +104,9 @@ export async function getChallengeDetailBySlug(slug: string, userId: string) {
     startDate: challenge.startDate,
     endDate: challenge.endDate,
     isActive: challenge.isActive,
+    challengeType: challenge.challengeType,
+    completionMode: challenge.completionMode,
+    completionTarget: challenge.completionTarget,
     competitions: challenge.competitions.map((item) => item.competition.name),
     fixtures,
   };

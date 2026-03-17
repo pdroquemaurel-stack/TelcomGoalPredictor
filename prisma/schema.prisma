@@ -83,6 +83,16 @@ enum BadgeCriterionType {
   EXACT_PREDICTION_COUNT
 }
 
+enum ChallengeType {
+  RANKING
+  COMPLETION
+}
+
+enum ChallengeCompletionMode {
+  CORRECT
+  EXACT
+}
+
 model User {
   id           String     @id @default(cuid())
   email        String     @unique
@@ -105,6 +115,7 @@ model User {
   recvRequests         Friendship[]          @relation("FriendshipAddressee")
   adminRoles           AdminUserRole[]
   auditLogs            AuditLog[]
+  loginActivities      LoginActivity[]
 }
 
 model Account {
@@ -281,6 +292,9 @@ model Challenge {
   endDate     DateTime
   reward      String?
   isActive    Boolean  @default(true)
+  challengeType ChallengeType @default(RANKING)
+  completionMode ChallengeCompletionMode?
+  completionTarget Int?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -288,6 +302,17 @@ model Challenge {
   competitions  ChallengeCompetition[]
 
   @@index([isActive, startDate, endDate])
+}
+
+model LoginActivity {
+  id        String   @id @default(cuid())
+  userId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([userId, createdAt])
 }
 
 model ChallengeCompetition {
