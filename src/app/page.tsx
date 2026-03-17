@@ -36,7 +36,7 @@ export default async function HomePage() {
 
   const recapUpdate = await prisma.profile.updateMany({
     where: {
-      id: profile.id,
+      userId,
       OR: [
         { lastDailyRecapSeenAt: null },
         { lastDailyRecapSeenAt: { lt: todayRange.start } },
@@ -83,7 +83,7 @@ export default async function HomePage() {
         { totalPoints: { gt: profile.totalPoints } },
         {
           totalPoints: profile.totalPoints,
-          id: { lt: profile.id },
+          userId: { lt: userId },
         },
       ],
     },
@@ -99,7 +99,7 @@ export default async function HomePage() {
           { totalPoints: { gt: profile.totalPoints } },
           {
             totalPoints: profile.totalPoints,
-            id: { lt: profile.id },
+            userId: { lt: userId },
           },
         ],
       },
