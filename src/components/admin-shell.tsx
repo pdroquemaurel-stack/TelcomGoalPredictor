@@ -4,12 +4,12 @@ import { ReactNode } from 'react';
 const links = [
   ['/admin/dashboard', 'Dashboard'],
   ['/admin/competitions', 'Competitions'],
-  ['/admin/challenges', 'Challenges'],
-  ['/admin/fixtures', 'Matches'],
-  ['/admin/operations', 'Operations'],
-  ['/admin/settings', 'Settings'],
+  ['/admin/fixtures', 'Match'],
+  ['/admin/challenges', 'Challenge'],
   ['/admin/users', 'Users'],
   ['/admin/badges', 'Badges'],
+  ['/admin/settings', 'Settings'],
+  ['/admin/operations', 'Maintenance'],
 ];
 
 export function AdminShell({ children }: { children: ReactNode }) {

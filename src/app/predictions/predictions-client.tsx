@@ -54,7 +54,12 @@ export function PredictionsClient() {
   const upcomingFixtures = useMemo(
     () => fixtures
       .filter((fixture) => isUpcomingFixture(fixture))
-      .sort((a, b) => +new Date(a.kickoff) - +new Date(b.kickoff)),
+      .sort((a, b) => {
+        const aLocked = a.state === 'locked' ? 0 : 1;
+        const bLocked = b.state === 'locked' ? 0 : 1;
+        if (aLocked !== bLocked) return aLocked - bLocked;
+        return +new Date(a.kickoff) - +new Date(b.kickoff);
+      }),
     [fixtures],
   );
 
@@ -68,6 +73,7 @@ export function PredictionsClient() {
   const groupedFixtures = groupFixturesByDay(tab === 'upcoming' ? upcomingFixtures : pastFixtures);
   const availablePredictionsCount = upcomingFixtures.filter((fixture) => fixture.state === 'open' || fixture.state === 'saved').length;
   const savedUpcomingPredictionsCount = upcomingFixtures.filter((fixture) => Boolean(fixture.savedPrediction)).length;
+  const lockedUpcomingPredictionsCount = upcomingFixtures.filter((fixture) => fixture.state === 'locked').length;
 
   return (
     <main className="mx-auto max-w-md space-y-4 px-4 pb-28 pt-5">
@@ -88,8 +94,16 @@ export function PredictionsClient() {
       </section>
 
 
-      {message && <p className="rounded-2xl border border-brand bg-brand/10 px-4 py-3 text-sm font-semibold text-orange-100">{message}</p>}
-      {loading && <section className="card text-sm text-zinc-300">Chargement des matchs...</section>}
+      {tab === 'upcoming' && (
+        <section className="card grid grid-cols-3 gap-2 text-center text-xs font-bold">
+          <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 px-2 py-2 text-emerald-200">Pronostiquable<br />{availablePredictionsCount}</div>
+          <div className="rounded-2xl border border-sky-500/40 bg-sky-500/10 px-2 py-2 text-sky-200">Déjà pronostiqué<br />{savedUpcomingPredictionsCount}</div>
+          <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 px-2 py-2 text-amber-200">Verrouillé<br />{lockedUpcomingPredictionsCount}</div>
+        </section>
+      )}
+
+      {message && <p className="rounded-2xl border border-rose-400/40 bg-rose-500/10 px-4 py-3 text-sm font-semibold text-rose-200">{message}</p>}
+      {loading && <section className="card text-sm text-zinc-300">Chargement des matchs et de vos pronostics…</section>}
 
       {!loading && groupedFixtures.length === 0 && (
         <section className="card text-sm text-zinc-300">

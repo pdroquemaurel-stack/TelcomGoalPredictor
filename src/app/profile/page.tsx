@@ -4,6 +4,7 @@ import { requireOnboardedUser } from '@/lib/player-access';
 import { LogoutButton } from '@/components/logout-button';
 import { calculatePredictionActivityStreak } from '@/lib/profile-streak';
 import { resolveBadgeImagePath } from '@/lib/badge-image';
+import { InviteFriendsSheet } from '@/components/invite-friends-sheet';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -31,7 +32,7 @@ function StreakDots({ streak }: { streak: number }) {
 export default async function ProfilePage() {
   const { me } = await requireOnboardedUser();
 
-  const [profile, allBadges, predictions] = await Promise.all([
+  const [profile, allBadges, predictions, userIdentity] = await Promise.all([
     prisma.profile.findUnique({
       where: { userId: me.id },
       include: {
@@ -41,6 +42,7 @@ export default async function ProfilePage() {
     }),
     prisma.badge.findMany({ where: { isActive: true }, orderBy: [{ displayOrder: 'asc' }, { threshold: 'asc' }, { name: 'asc' }] }),
     prisma.prediction.findMany({ where: { userId: me.id }, select: { createdAt: true } }),
+    prisma.user.findUnique({ where: { id: me.id }, select: { username: true, friendCode: true } }),
   ]);
 
   const ownedBadgeIds = new Set((profile?.user.badges ?? []).map((item) => item.badgeId));
@@ -101,6 +103,13 @@ export default async function ProfilePage() {
         ) : (
           <p className="mt-2 text-sm text-zinc-300">Aucun badge disponible pour l’instant.</p>
         )}
+      </section>
+
+      <section className="card">
+        <InviteFriendsSheet
+          friendCode={userIdentity?.friendCode ?? 'INDISPONIBLE'}
+          username={userIdentity?.username ?? 'player'}
+        />
       </section>
 
       <section className="card">

@@ -137,7 +137,10 @@ export default async function AdminFixturesPage({ searchParams }: { searchParams
   return (
     <div className="space-y-4 text-black">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Matches</h1>
+        <div>
+          <h1 className="text-2xl font-bold">Match</h1>
+          <p className="text-sm text-slate-600">Mets à jour les statuts, verrouillages et scores. Le settlement est relancé automatiquement après sauvegarde.</p>
+        </div>
         <div className="flex items-center gap-2">
           <Link className="rounded border border-zinc-300 px-3 py-2 text-sm font-semibold" href="/admin/competitions">← Back to competitions</Link>
           <Link className="rounded bg-brand px-3 py-2 text-sm font-bold text-black" href="/admin/fixtures?add=1">Add match</Link>
@@ -178,7 +181,7 @@ export default async function AdminFixturesPage({ searchParams }: { searchParams
                   <p className="font-semibold">{fixture.homeTeam.name} vs {fixture.awayTeam.name}</p>
                   <p className="text-xs text-zinc-600">{fixture.competition.name} • {longDate(fixture.utcKickoff)}</p>
                   <p className="text-xs text-zinc-700">Statut: <strong>{fixture.fixtureState}</strong> • Score: <strong>{fixture.homeScore ?? '-'} - {fixture.awayScore ?? '-'}</strong></p>
-                  <p className="text-xs text-zinc-700">Pronostics: <strong>{fixture._count.predictions}</strong> • {fixture.predictionEnabled ? '🔓' : '🔒'}</p>
+                  <p className="text-xs text-zinc-700">Pronostics: <strong>{fixture._count.predictions}</strong> • {fixture.predictionEnabled ? '🔓 Pronostic ouvert' : '🔒 Pronostic verrouillé'}</p>
                 </div>
                 <Link href={`/admin/fixtures?${new URLSearchParams({ ...(competitionId ? { competitionId } : {}), ...(query ? { q: query } : {}), ...(selectedState ? { state: selectedState } : {}), ...(day ? { day } : {}), sort, ...(isEditing ? {} : { edit: fixture.id }) }).toString()}`} className="rounded border px-3 py-1 text-sm font-semibold">Modifier</Link>
               </div>
@@ -194,6 +197,7 @@ export default async function AdminFixturesPage({ searchParams }: { searchParams
                   <select name="predictionEnabled" className="rounded border p-2" defaultValue={fixture.predictionEnabled ? 'true' : 'false'}><option value="true">Déverrouillé</option><option value="false">Verrouillé</option></select>
                   <select name="visible" className="rounded border p-2" defaultValue={fixture.visible ? 'true' : 'false'}><option value="true">Visible</option><option value="false">Masqué</option></select>
                   <button className="rounded bg-black px-3 py-2 text-sm font-semibold text-white md:col-span-2" type="submit">Save</button>
+                  <p className="text-xs text-slate-600 md:col-span-6">Après sauvegarde, un settlement/resettlement est déclenché pour aligner les points joueurs sur le score final.</p>
                 </form>
               )}
             </article>

@@ -62,7 +62,8 @@ export default async function ChallengesPage() {
     <main className="mx-auto max-w-md space-y-4 px-4 pb-28 pt-5">
       <header className="rounded-3xl bg-brand p-5 text-black">
         <p className="text-xs font-black uppercase tracking-[0.18em]">Challenges</p>
-        <h1 className="mt-1 text-2xl font-black">Challenges actifs</h1>
+        <h1 className="mt-1 text-2xl font-black">Challenges</h1>
+        <p className="mt-1 text-sm font-bold">Choisis un challenge et suis tes points sur les matchs passés.</p>
       </header>
       {sortedChallenges.map((challenge) => {
         const daysToStart = Math.ceil((+new Date(challenge.startDate) - +now) / (1000 * 60 * 60 * 24));
@@ -98,7 +99,7 @@ export default async function ChallengesPage() {
           </article>
         );
       })}
-      {sortedChallenges.length === 0 && <article className="card text-sm text-zinc-300">Aucun challenge actif.</article>}
+      {sortedChallenges.length === 0 && <article className="card text-sm text-zinc-300">Aucun challenge disponible pour le moment.</article>}
       <PlayerNav />
     </main>
   );

@@ -81,6 +81,21 @@ function getPointsLabel(points: number | undefined) {
   if (points >= 1) return '+1pt';
   return '0pt';
 }
+
+function getPointsBoxClasses(points: number | undefined) {
+  if (typeof points !== 'number') return 'border-white/15 bg-zinc-900 text-zinc-300';
+  if (points >= 3) return 'border-emerald-400/60 bg-emerald-500/15 text-emerald-300';
+  if (points >= 1) return 'border-sky-400/60 bg-sky-500/15 text-sky-300';
+  return 'border-white/15 bg-zinc-900 text-zinc-400';
+}
+
+function getFixtureStatusLabel(options: { editable: boolean; isLocked: boolean; hasPrediction: boolean; isPastFixture: boolean }) {
+  if (options.isPastFixture) return 'Match passé';
+  if (options.isLocked) return 'Verrouillé';
+  if (options.hasPrediction) return 'Déjà pronostiqué';
+  if (options.editable) return 'Pronostiquable';
+  return 'En attente';
+}
 function LockBadge({ className }: { className: string }) {
   return (
     <span
@@ -142,6 +157,12 @@ export function FixturePredictionCard(props: FixturePredictionCardProps) {
   const displayOdds = getDisplayOdds(odds);
   const shouldShowOdds = shouldShowFixtureOdds(isPastFixture);
   const pastFixtureStatusMessage = getPastFixtureStatusMessage(isPastFixture, isFinishedWithoutScore);
+  const statusLabel = getFixtureStatusLabel({
+    editable: canEditPrediction,
+    isLocked,
+    hasPrediction: Boolean(prediction),
+    isPastFixture,
+  });
 
   useEffect(() => () => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -205,6 +226,7 @@ export function FixturePredictionCard(props: FixturePredictionCardProps) {
 
       <div className="relative z-0">
         <p className="text-[11px] text-zinc-400">{formatMatchDateTime(kickoff)} • {competition}</p>
+        <p className="mt-1 text-[11px] font-semibold text-zinc-300">Statut: <span className="font-black">{statusLabel}</span></p>
         <div className="mt-2 grid grid-cols-[76px_1fr_76px] items-center gap-2">
           <div className="flex flex-col items-center gap-1">
             <TeamAvatar logoUrl={homeLogoUrl} name={home} />
@@ -269,8 +291,11 @@ export function FixturePredictionCard(props: FixturePredictionCardProps) {
             {pastFixtureStatusMessage && (
               <p className="text-[10px] text-zinc-300" data-testid="past-score-pending-message">{pastFixtureStatusMessage}</p>
             )}
-            {finalScore && (
-              <p className={`text-[10px] font-black ${getPointsClass(points)}`} data-testid="past-points">{getPointsLabel(points)}</p>
+            {isPastFixture && (
+              <div className={`mt-1 flex items-center gap-1 rounded-xl border px-2 py-1 ${getPointsBoxClasses(points)}`} data-score-box-mode="history-placeholder" data-testid="past-points-box">
+                <span className="text-[10px] uppercase tracking-[0.12em]">Points</span>
+                <span className={`text-sm font-black ${getPointsClass(points)}`} data-testid="past-points">{getPointsLabel(points)}</span>
+              </div>
             )}
           </div>
 

@@ -80,8 +80,8 @@ export default function AdminOperationsPage() {
   return (
     <div className="space-y-6 text-black">
       <div className="rounded-2xl bg-white p-4">
-        <h1 className="text-2xl font-bold">Operations center</h1>
-        <p className="text-sm text-slate-600">Pilotage sync + KPIs système + détection rapide des fixtures problématiques.</p>
+        <h1 className="text-2xl font-bold">Maintenance</h1>
+        <p className="text-sm text-slate-600">Synchronisation des matchs, contrôles clés et opérations de maintenance.</p>
       </div>
 
       {summary && (
@@ -106,7 +106,7 @@ export default function AdminOperationsPage() {
       )}
 
       <section className="rounded-2xl bg-white p-4">
-        <h2 className="text-lg font-bold">Sync manuelle</h2>
+        <h2 className="text-lg font-bold">Synchroniser les matchs</h2>
         <p className="text-sm text-slate-600">Dernière sync: {summary?.lastSyncAt ? new Date(summary.lastSyncAt).toLocaleString() : 'Aucune'}</p>
         <button onClick={runSync} disabled={loadingSync} className="mt-3 rounded bg-brand px-4 py-2 font-bold text-black">
           {loadingSync ? 'Synchronisation...' : 'Actualiser les matchs depuis l’API'}
@@ -114,7 +114,7 @@ export default function AdminOperationsPage() {
       </section>
 
       <section className="rounded-2xl bg-white p-4">
-        <h2 className="text-lg font-bold">Fixtures problématiques</h2>
+        <h2 className="text-lg font-bold">Matchs à vérifier</h2>
         <div className="mt-2 space-y-2 text-sm">
           {(summary?.problematicFixtures ?? []).map((fixture) => (
             <div key={fixture.id} className="rounded border p-2">
@@ -127,7 +127,7 @@ export default function AdminOperationsPage() {
       </section>
 
       <section className="rounded-2xl border-2 border-rose-300 bg-rose-50 p-4">
-        <h2 className="text-lg font-bold text-rose-700">Danger zone — purge compétitions/matchs</h2>
+        <h2 className="text-lg font-bold text-rose-700">Zone critique — Purge compétitions/matchs</h2>
         <p className="text-sm text-rose-700">Cette action supprime compétitions, équipes, matchs, challenges liés et pronostics associés.</p>
         <p className="mt-2 text-sm font-semibold text-rose-800">Tape DELETE pour confirmer.</p>
         <input className="mt-2 w-full rounded border border-rose-300 p-2" value={confirmText} onChange={(e) => setConfirmText(e.target.value)} placeholder="DELETE" />
