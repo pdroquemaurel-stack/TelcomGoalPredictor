@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { calculatePredictionPoints } from '@/lib/scoring';
+import { calculatePredictionPoints, isFixtureFinished } from '@/lib/scoring';
 
 test('calculatePredictionPoints returns 3 for exact score', () => {
   assert.equal(calculatePredictionPoints(2, 1, 2, 1), 3);
@@ -13,4 +13,8 @@ test('calculatePredictionPoints returns 1 for correct outcome', () => {
 
 test('calculatePredictionPoints returns 0 for wrong outcome', () => {
   assert.equal(calculatePredictionPoints(2, 1, 1, 3), 0);
+});
+
+test('isFixtureFinished accepts SETTLED for deterministic rescoring path', () => {
+  assert.equal(isFixtureFinished('SETTLED', 2, 1), true);
 });

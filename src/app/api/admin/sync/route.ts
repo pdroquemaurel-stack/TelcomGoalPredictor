@@ -37,32 +37,42 @@ export async function POST() {
     currentStep = 'settleFinishedFixtures';
     const settlement = await settleFinishedFixtures();
 
+    const syncResult = {
+      success: true,
+      from,
+      to,
+      competitionsSynced: competitions.syncedCount,
+      competitionsFetched: competitions.totalFetched,
+      fixturesCreated: fixtures.created,
+      fixturesUpdated: fixtures.updated,
+      fixturesSkipped: fixtures.skipped,
+      fixturesFetched: fixtures.totalFetched,
+      fixturesProcessed: fixtures.totalProcessed,
+      settlement,
+      errors: fixtures.errors,
+    };
+
+    console.info('[admin-sync] sync completed', {
+      from,
+      to,
+      competitionsSynced: syncResult.competitionsSynced,
+      fixturesFetched: syncResult.fixturesFetched,
+      fixturesProcessed: syncResult.fixturesProcessed,
+      fixturesSkipped: syncResult.fixturesSkipped,
+      settledFixturesCount: settlement.settledFixturesCount,
+      updatedPredictionsCount: settlement.updatedPredictionsCount,
+    });
+
     await prisma.auditLog.create({
       data: {
         actorUserId: actorUserId ?? null,
         action: 'ADMIN_SYNC_SUCCESS',
         targetType: 'SYNC',
-        metadata: {
-          from,
-          to,
-          competitionsSynced: competitions.syncedCount,
-          fixturesCreated: fixtures.created,
-          fixturesUpdated: fixtures.updated,
-          fixturesFetched: fixtures.totalFetched,
-          settlement,
-        },
+        metadata: syncResult,
       },
     });
 
-    return apiSuccess({
-      from,
-      to,
-      competitionsSynced: competitions.syncedCount,
-      fixturesCreated: fixtures.created,
-      fixturesUpdated: fixtures.updated,
-      fixturesFetched: fixtures.totalFetched,
-      settlement,
-    });
+    return apiSuccess(syncResult);
   } catch (error) {
     const formatted = formatAdminSyncError(currentStep, error);
 

@@ -66,7 +66,7 @@ async function rebuildProfileTotals(userId: string, prismaClient: PrismaClient) 
 
 export async function settleFixturesByIds(fixtureIds: string[], prismaClient: PrismaClient = prisma) {
   if (!fixtureIds.length) {
-    return { settledFixturesCount: 0, updatedPredictionsCount: 0, impactedUsersCount: 0 };
+    return { settledFixturesCount: 0, resettledFixturesCount: 0, updatedPredictionsCount: 0, impactedUsersCount: 0 };
   }
 
   const originalCandidates = await prismaClient.fixture.findMany({
@@ -74,14 +74,16 @@ export async function settleFixturesByIds(fixtureIds: string[], prismaClient: Pr
     include: { predictions: true },
   });
 
-  return settleCandidateFixtures(originalCandidates, prismaClient);
+  return settleCandidateFixtures(originalCandidates, prismaClient, { allowResettlement: true });
 }
 
 async function settleCandidateFixtures(
   candidateFixtures: Array<{ id: string; statusText: string; homeScore: number | null; awayScore: number | null; fixtureState: FixtureState; predictions: Array<{ id: string; userId: string; homeScore: number; awayScore: number; pointsAwarded: number }> }>,
   prismaClient: PrismaClient,
+  options: { allowResettlement?: boolean } = {},
 ) {
   let settledFixturesCount = 0;
+  let resettledFixturesCount = 0;
   let updatedPredictionsCount = 0;
   const impactedUserIds = new Set<string>();
 
@@ -96,8 +98,11 @@ async function settleCandidateFixtures(
         include: { predictions: true },
       });
 
-      if (!freshFixture || freshFixture.fixtureState === FixtureState.SETTLED) return;
+      if (!freshFixture) return;
+      if (!options.allowResettlement && freshFixture.fixtureState === FixtureState.SETTLED) return;
       if (freshFixture.homeScore === null || freshFixture.awayScore === null) return;
+
+      const wasSettled = freshFixture.fixtureState === FixtureState.SETTLED;
 
       const scoredPredictions = scoreFixturePredictions(
         freshFixture.homeScore,
@@ -120,7 +125,8 @@ async function settleCandidateFixtures(
         data: { fixtureState: FixtureState.SETTLED, predictionEnabled: false, statusText: 'SETTLED' },
       });
 
-      settledFixturesCount += 1;
+      if (wasSettled) resettledFixturesCount += 1;
+      else settledFixturesCount += 1;
     });
   }
 
@@ -133,6 +139,7 @@ async function settleCandidateFixtures(
 
   return {
     settledFixturesCount,
+    resettledFixturesCount,
     updatedPredictionsCount,
     impactedUsersCount: impactedUserIds.size,
   };
@@ -141,7 +148,10 @@ async function settleCandidateFixtures(
 export async function settleFinishedFixtures(prismaClient: PrismaClient = prisma) {
   const candidateFixtures = await prismaClient.fixture.findMany({
     where: {
-      fixtureState: { in: [FixtureState.SCHEDULED, FixtureState.LIVE, FixtureState.FINISHED] },
+      // Include already SETTLED fixtures to support deterministic rescoring
+      // after a score correction. The process stays idempotent because
+      // points are overwritten from current truth and aggregates are rebuilt.
+      fixtureState: { in: [FixtureState.SCHEDULED, FixtureState.LIVE, FixtureState.FINISHED, FixtureState.SETTLED] },
       homeScore: { not: null },
       awayScore: { not: null },
     },
@@ -149,5 +159,5 @@ export async function settleFinishedFixtures(prismaClient: PrismaClient = prisma
     orderBy: { utcKickoff: 'asc' },
   });
 
-  return settleCandidateFixtures(candidateFixtures, prismaClient);
+  return settleCandidateFixtures(candidateFixtures, prismaClient, { allowResettlement: true });
 }

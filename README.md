@@ -1,100 +1,97 @@
-# TelcomGoalPredictor MVP
+# TelcomGoalPredictor (MVP)
 
-A mobile-first football prediction app for a pan-African audience, focused on a reliable core game loop.
+Application de pronostics football mobile-first pour un public panafricain.
 
-## MVP Scope
+## Scope officiel (état réel du repo)
 
-### Player
-- Homepage
-- Predictions
-- Results
-- Leaderboard
-- Profile
+### Parcours joueur disponibles
+- Authentification par **username/password**.
+- Onboarding pays.
+- Récap quotidien (`/`) puis pronostics (`/predictions`).
+- Résultats (`/results`).
+- Classements (`/leaderboards`) : global, pays, amis.
+- Challenges (`/challenges`) + détail challenge.
+- Profil joueur (`/profile`).
 
-### Admin
-- Dashboard
-- Competitions
-- Fixtures
-- Users
-- Sync fixtures
+### Parcours admin disponibles
+- Dashboard (`/admin/dashboard`).
+- Compétitions (`/admin/competitions`).
+- Fixtures / édition score & statut (`/admin/fixtures`).
+- Challenges (`/admin/challenges`).
+- Opérations (`/admin/operations`) : sync provider + purge.
+- Utilisateurs (`/admin/users`).
+- Badges (`/admin/badges`).
+- Paramètres globaux (`/admin/settings`).
 
-Temporarily disabled in MVP mode: friends, bonus shop, QR/friend features, ad/campaign/product tooling.
+### Hors scope MVP (masqué/redirigé)
+- `/friends` redirige vers leaderboard amis.
+- `/shop` redirige vers `/predictions`.
+- `/admin/products`, `/admin/ads`, `/admin/campaigns` redirigent vers `/admin/dashboard`.
 
-## Core Game Rules
+## Règles cœur produit
 
-- One prediction per user per fixture (`@@unique([userId, fixtureId])`).
-- Prediction allowed only before kickoff and only when fixture state is `SCHEDULED`.
-- Scoring rules (single source of truth in `src/lib/scoring.ts`):
-  - Exact score = 3 points
-  - Correct outcome = 1 point
-  - Wrong outcome = 0 points
-- Fixture lifecycle:
-  - `SCHEDULED` → `LIVE` → `FINISHED` → `SETTLED`
+- 1 pronostic max par utilisateur/match.
+- Pronostic autorisé uniquement avant kickoff et si fixture prédictible.
+- Scoring (`src/lib/scoring.ts`) :
+  - score exact = 3
+  - bon résultat = 1
+  - sinon = 0
+- Lifecycle fixture : `SCHEDULED` → `LIVE` → `FINISHED` → `SETTLED`.
+- Settlement/rescoring idempotent (`src/lib/services/settlement-service.ts`) :
+  - premier settlement,
+  - relance sans changement,
+  - correction de score après settlement,
+  sont tous supportés sans double comptage (recalcul par vérité courante).
 
-## Installation
+## Sync admin (provider)
+
+Endpoint: `POST /api/admin/sync`
+
+La réponse inclut :
+- succès/échec (`ok` + `data.success`),
+- fenêtre sync (`from`, `to`),
+- compétitions synchronisées,
+- fixtures créées / mises à jour / ignorées,
+- total récupéré / total traité,
+- résultat settlement,
+- erreurs utiles non bloquantes (`errors`).
+
+## Setup local
 
 ```bash
-git clone <YOUR_REPO_URL>
-cd TelcomGoalPredictor
 npm install
 cp .env.example .env
-```
-
-Fill `.env` values.
-
-## Database setup
-
-```bash
 npm run prisma:generate
 npm run prisma:migrate -- --name init
 npm run prisma:seed
-```
-
-## Run locally
-
-```bash
 npm run dev
 ```
 
-App: http://localhost:3000
+App locale: `http://localhost:3000`
 
-Demo credentials:
-- Admin: `admin@demo.com` / `Admin123!`
-- Player: `player@demo.com` / `Player123!`
+## Variables d’environnement
 
-## Settlement & Leaderboard workflow
+- `DATABASE_URL`
+- `NEXTAUTH_URL`
+- `NEXTAUTH_SECRET`
+- `FOOTBALL_DATA_API_KEY`
 
-Settlement is idempotent and re-runnable via `settleFinishedFixtures`:
-1. Detect finished fixtures (`homeScore`/`awayScore` + status check).
-2. Compute and persist `prediction.pointsAwarded`.
-3. Mark fixtures as `SETTLED` and lock predictions.
-4. Rebuild impacted user profile totals from predictions.
-5. Rebuild all-time leaderboard snapshot.
+## Comptes demo (seed réel)
 
-Triggered after admin sync in `POST /api/admin/sync`.
+> Auth via **username** (pas email).
 
-## Render deployment
+- Admin: `admin` / `admin123!`
+- Joueur: `joueur1` / `joueur1`
+- Joueur: `joueur2` / `joueur2`
+- Joueur: `player` / `player`
 
-This repo includes `render.yaml`.
-
-1. Create Render Blueprint from this repository.
-2. Ensure env vars are set:
-   - `DATABASE_URL`
-   - `NEXTAUTH_URL`
-   - `NEXTAUTH_SECRET`
-   - `FOOTBALL_DATA_API_KEY`
-3. Deploy.
-4. Run seed once in Render shell:
-   ```bash
-   npm run prisma:seed
-   ```
-
-## Useful commands
+## Commandes utiles
 
 ```bash
 npm run dev
 npm run build
-npm run start
+npm run lint
+npm run test
 npm run prisma:generate
 npm run prisma:migrate -- --name <migration_name>
 npm run prisma:deploy
@@ -102,57 +99,20 @@ npm run prisma:seed
 npm run sync:fixtures
 ```
 
-## Team logos (player match cards)
+## Vérifications manuelles recommandées
 
-- Store logo files in: `public/teams/`
-- Recommended naming convention:
-  - lowercase
-  - kebab-case
-  - stable names
-  - examples: `france.png`, `morocco.png`, `ivory-coast.png`, `manchester-city.png`
-- Assign logos to teams using `Team.logoUrl` (example: `/teams/morocco.png`).
-- If `logoUrl` is empty, the app automatically tries `/teams/<normalized-team-name>.png`.
-- If the file does not exist, the UI falls back to a circular initials badge.
+1. **Sync admin**
+   - Aller sur `/admin/operations`.
+   - Lancer “Actualiser les matchs depuis l’API”.
+   - Vérifier le résumé: compétitions, fixtures créées/mises à jour/ignorées, settlement, erreurs.
 
-## Daily predictions & challenges (POC)
+2. **Rescoring post-correction**
+   - Sur `/admin/fixtures`, choisir un match déjà `SETTLED` avec pronostics.
+   - Modifier score puis sauvegarder.
+   - Vérifier mise à jour des `pointsAwarded`, profil (`/profile`) et leaderboard (`/leaderboards`).
+   - Réappliquer la même valeur : aucun double ajout de points.
 
-### Daily flow (Aujourd’hui / Demain)
-- Only fixtures from competitions with `Competition.isDailyEnabled = true` are included.
-- Daily feed uses a short window: today + tomorrow.
-- Only open/predictable fixtures are shown (`SCHEDULED`, `predictionEnabled`, `visible`).
-- Player entry points:
-  - Home (`/`) section “Matchs du jour & demain”
-  - Dedicated page: `/daily`
-
-### Challenges flow
-- Admin creates a `Challenge` linked to one competition with a period (`startDate` → `endDate`).
-- Matching fixtures are linked into `ChallengeFixture` (unique by `challengeId + fixtureId`).
-- Player entry points:
-  - Challenges list: `/challenges`
-  - Challenge detail: `/challenges/[slug]`
-- Challenge leaderboard is computed dynamically from predictions on challenge fixtures.
-
-### Admin configuration
-- Daily feed toggle per competition: Admin > Competitions (`isDailyEnabled`).
-- Challenge management: Admin > Challenges (create/list/delete in MVP).
-- Manual sync: Admin > Operations > “Actualiser les matchs depuis l’API”.
-- Purge (POC only): Admin > Operations > Danger Zone.
-  - Requires admin role and `DELETE` confirmation.
-  - Removes dependent rows first, then fixtures/competitions/teams.
-- If you previously imported generic team names (e.g. `Team 516`), run:
-  1. Admin > Operations > Purge (confirm `DELETE`)
-  2. Admin > Operations > Manual sync
-  This recreates teams with real `name`, `shortName`, and `crestUrl` from football-data.
-
-### API surface added
-- Player:
-  - `GET /api/public/daily`
-  - `GET /api/public/challenges`
-  - `GET /api/public/challenges/[slug]`
-  - `GET /api/public/challenges/[slug]/leaderboard`
-- Admin:
-  - `GET/POST /api/admin/challenges`
-  - `PATCH/DELETE /api/admin/challenges/[id]`
-  - `PATCH /api/admin/competitions/[id]/daily`
-  - `POST /api/admin/sync` (now returns sync summary)
-  - `POST /api/admin/purge`
+3. **Surface MVP**
+   - `/friends` doit rediriger vers leaderboard amis.
+   - `/shop` doit rediriger vers `/predictions`.
+   - Routes admin hors scope (products/ads/campaigns) redirigent vers dashboard.

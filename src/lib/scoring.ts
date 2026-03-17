@@ -32,5 +32,5 @@ export function calculatePredictionPoints(
 export function isFixtureFinished(statusText: string, homeScore: number | null, awayScore: number | null): boolean {
   if (homeScore === null || awayScore === null) return false;
   const normalizedStatus = statusText.toUpperCase();
-  return ['FINISHED', 'FT', 'AET', 'PEN'].includes(normalizedStatus) || normalizedStatus.includes('FINISHED');
+  return ['FINISHED', 'FT', 'AET', 'PEN', 'SETTLED'].includes(normalizedStatus) || normalizedStatus.includes('FINISHED');
 }
