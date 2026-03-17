@@ -2,6 +2,7 @@ import { FixtureState } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { footballProvider } from '@/lib/football';
 import { isFixtureFinished } from '@/lib/scoring';
+import type { FootballProvider } from '@/lib/football/types';
 
 export type CompetitionSyncResult = {
   syncedCount: number;
@@ -15,6 +16,11 @@ export type FixtureSyncResult = {
   totalFetched: number;
   totalProcessed: number;
   errors: string[];
+};
+
+type SyncDeps = {
+  provider?: Pick<FootballProvider, 'getCompetitions' | 'getFixtures'>;
+  prismaClient?: typeof prisma;
 };
 
 export function mapFixtureState(statusText: string, homeScore?: number | null, awayScore?: number | null) {
@@ -40,34 +46,74 @@ export function mergeFixtureScores(
   };
 }
 
-export async function syncCompetitions() {
-  const provider = footballProvider();
+async function upsertCompetition(prismaClient: typeof prisma, competitionData: Awaited<ReturnType<FootballProvider['getCompetitions']>>[number]) {
+  await prismaClient.competition.upsert({
+    where: { externalId: competitionData.externalId },
+    create: {
+      externalId: competitionData.externalId,
+      code: competitionData.code,
+      name: competitionData.name,
+      country: competitionData.country,
+    },
+    update: {
+      code: competitionData.code,
+      name: competitionData.name,
+      country: competitionData.country,
+    },
+  });
+}
+
+export async function syncCompetitions(deps: SyncDeps = {}) {
+  const provider = deps.provider ?? footballProvider();
+  const prismaClient = deps.prismaClient ?? prisma;
   const competitions = await provider.getCompetitions();
   let syncedCount = 0;
 
   for (const competitionData of competitions) {
     syncedCount += 1;
-    await prisma.competition.upsert({
-      where: { externalId: competitionData.externalId },
-      create: {
-        externalId: competitionData.externalId,
-        code: competitionData.code,
-        name: competitionData.name,
-        country: competitionData.country,
-      },
-      update: {
-        code: competitionData.code,
-        name: competitionData.name,
-        country: competitionData.country,
-      },
-    });
+    await upsertCompetition(prismaClient, competitionData);
   }
 
   return { syncedCount, totalFetched: competitions.length } satisfies CompetitionSyncResult;
 }
 
-export async function syncFixtures(from: string, to: string) {
-  const provider = footballProvider();
+async function upsertTeams(prismaClient: typeof prisma, fixtureData: Awaited<ReturnType<FootballProvider['getFixtures']>>[number]) {
+  const homeTeam = await prismaClient.team.upsert({
+    where: { externalId: fixtureData.homeTeamExternalId },
+    create: {
+      externalId: fixtureData.homeTeamExternalId,
+      name: fixtureData.homeTeamName,
+      shortName: fixtureData.homeTeamShortName ?? null,
+      crestUrl: fixtureData.homeTeamCrest ?? null,
+    },
+    update: {
+      name: fixtureData.homeTeamName,
+      shortName: fixtureData.homeTeamShortName ?? null,
+      crestUrl: fixtureData.homeTeamCrest ?? null,
+    },
+  });
+
+  const awayTeam = await prismaClient.team.upsert({
+    where: { externalId: fixtureData.awayTeamExternalId },
+    create: {
+      externalId: fixtureData.awayTeamExternalId,
+      name: fixtureData.awayTeamName,
+      shortName: fixtureData.awayTeamShortName ?? null,
+      crestUrl: fixtureData.awayTeamCrest ?? null,
+    },
+    update: {
+      name: fixtureData.awayTeamName,
+      shortName: fixtureData.awayTeamShortName ?? null,
+      crestUrl: fixtureData.awayTeamCrest ?? null,
+    },
+  });
+
+  return { homeTeam, awayTeam };
+}
+
+export async function syncFixtures(from: string, to: string, deps: SyncDeps = {}) {
+  const provider = deps.provider ?? footballProvider();
+  const prismaClient = deps.prismaClient ?? prisma;
   const fixtures = await provider.getFixtures({ from, to });
 
   let created = 0;
@@ -83,44 +129,16 @@ export async function syncFixtures(from: string, to: string) {
         continue;
       }
 
-      const competition = await prisma.competition.findUnique({ where: { externalId: fixtureData.competitionExternalId } });
+      const competition = await prismaClient.competition.findUnique({ where: { externalId: fixtureData.competitionExternalId } });
       if (!competition) {
         skipped += 1;
         errors.push(`Fixture ${fixtureData.externalId}: competition ${fixtureData.competitionExternalId} not found locally.`);
         continue;
       }
 
-      const homeTeam = await prisma.team.upsert({
-        where: { externalId: fixtureData.homeTeamExternalId },
-        create: {
-          externalId: fixtureData.homeTeamExternalId,
-          name: fixtureData.homeTeamName,
-          shortName: fixtureData.homeTeamShortName ?? null,
-          crestUrl: fixtureData.homeTeamCrest ?? null,
-        },
-        update: {
-          name: fixtureData.homeTeamName,
-          shortName: fixtureData.homeTeamShortName ?? null,
-          crestUrl: fixtureData.homeTeamCrest ?? null,
-        },
-      });
+      const { homeTeam, awayTeam } = await upsertTeams(prismaClient, fixtureData);
 
-      const awayTeam = await prisma.team.upsert({
-        where: { externalId: fixtureData.awayTeamExternalId },
-        create: {
-          externalId: fixtureData.awayTeamExternalId,
-          name: fixtureData.awayTeamName,
-          shortName: fixtureData.awayTeamShortName ?? null,
-          crestUrl: fixtureData.awayTeamCrest ?? null,
-        },
-        update: {
-          name: fixtureData.awayTeamName,
-          shortName: fixtureData.awayTeamShortName ?? null,
-          crestUrl: fixtureData.awayTeamCrest ?? null,
-        },
-      });
-
-      const existing = await prisma.fixture.findUnique({
+      const existing = await prismaClient.fixture.findUnique({
         where: { externalId: fixtureData.externalId },
         select: { id: true, homeScore: true, awayScore: true, fixtureState: true },
       });
@@ -141,7 +159,7 @@ export async function syncFixtures(from: string, to: string) {
       if (existing) updated += 1;
       else created += 1;
 
-      await prisma.fixture.upsert({
+      await prismaClient.fixture.upsert({
         where: { externalId: fixtureData.externalId },
         create: {
           externalId: fixtureData.externalId,

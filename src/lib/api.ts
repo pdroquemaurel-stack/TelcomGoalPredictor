@@ -5,9 +5,11 @@ export type ApiErrorCode =
   | 'FORBIDDEN'
   | 'VALIDATION_ERROR'
   | 'NOT_FOUND'
+  | 'BUSINESS_ERROR'
   | 'PREDICTION_LOCKED'
   | 'INTERNAL_ERROR'
-  | 'EXTERNAL_PROVIDER_ERROR';
+  | 'EXTERNAL_PROVIDER_ERROR'
+  | 'UNKNOWN_ERROR';
 
 export function apiError(code: ApiErrorCode, message: string, status: number, details?: unknown) {
   return NextResponse.json({ ok: false, error: { code, message, details } }, { status });

@@ -6,7 +6,7 @@ import { apiError, apiSuccess } from '@/lib/api';
 import { buildAdminSyncWindow } from '@/lib/admin-sync-window';
 import { prisma } from '@/lib/prisma';
 import { type AdminSyncStep, formatAdminSyncError, validateAdminSyncConfig } from '@/lib/admin-sync-diagnostics';
-import type { AdminSyncResult } from '@/lib/admin-sync-contract';
+import { adminSyncResultSchema, type AdminSyncResult } from '@/lib/admin-sync-contract';
 
 export async function POST() {
   let currentStep: AdminSyncStep = 'auth';
@@ -24,7 +24,7 @@ export async function POST() {
     const configError = validateAdminSyncConfig();
     if (configError) {
       const formatted = formatAdminSyncError(currentStep, configError);
-      return apiError('VALIDATION_ERROR', formatted.message, 500, formatted.details);
+      return apiError(formatted.code, formatted.message, 500, formatted.details);
     }
 
     const { from, to } = buildAdminSyncWindow();
@@ -52,6 +52,9 @@ export async function POST() {
       settlement,
       errors: fixtures.errors,
     };
+
+    currentStep = 'responseContract';
+    adminSyncResultSchema.parse(syncResult);
 
     console.info('[admin-sync] sync completed', {
       from,
@@ -83,16 +86,17 @@ export async function POST() {
           actorUserId,
           action: 'ADMIN_SYNC_FAILURE',
           targetType: 'SYNC',
-          metadata: { step: currentStep, message: formatted.message, details: formatted.details },
+          metadata: { step: currentStep, code: formatted.code, message: formatted.message, details: formatted.details },
         },
       });
     }
 
     console.error('[admin-sync] sync failed', {
       step: currentStep,
+      code: formatted.code,
       error: error instanceof Error ? error.message : error,
       stack: error instanceof Error ? error.stack : undefined,
     });
-    return apiError('EXTERNAL_PROVIDER_ERROR', formatted.message, 500, formatted.details);
+    return apiError(formatted.code, formatted.message, 500, formatted.details);
   }
 }
