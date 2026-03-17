@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
+import { ChallengeCompletionMode, ChallengeType } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { ensureChallengeFixtureLinks } from '@/lib/services/challenge-service';
 import { formatMatchDateTime } from '@/lib/date-format';
@@ -15,6 +16,10 @@ async function updateChallenge(formData: FormData) {
   const description = String(formData.get('description') ?? '').trim();
   const reward = String(formData.get('reward') ?? '').trim();
   const isActive = String(formData.get('isActive') ?? '') === 'on';
+  const challengeType = String(formData.get('challengeType') ?? ChallengeType.RANKING) as ChallengeType;
+  const completionMode = String(formData.get('completionMode') ?? '') as ChallengeCompletionMode;
+  const completionTarget = Number(formData.get('completionTarget') ?? 0);
+
   if (!id || !name || !competitionIds.length || !startDate || !endDate) return;
 
   await prisma.challenge.update({
@@ -27,6 +32,9 @@ async function updateChallenge(formData: FormData) {
       description: description || null,
       reward: reward || null,
       isActive,
+      challengeType,
+      completionMode: challengeType === ChallengeType.COMPLETION ? completionMode || ChallengeCompletionMode.CORRECT : null,
+      completionTarget: challengeType === ChallengeType.COMPLETION && completionTarget > 0 ? completionTarget : null,
     },
   });
 
@@ -40,6 +48,18 @@ async function updateChallenge(formData: FormData) {
   await ensureChallengeFixtureLinks(id);
 
   revalidatePath(`/admin/challenges/${id}`);
+  revalidatePath('/admin/challenges');
+  revalidatePath('/challenges');
+}
+
+async function removeChallengeFixture(formData: FormData) {
+  'use server';
+  const challengeId = String(formData.get('challengeId') ?? '');
+  const fixtureId = String(formData.get('fixtureId') ?? '');
+  if (!challengeId || !fixtureId) return;
+
+  await prisma.challengeFixture.deleteMany({ where: { challengeId, fixtureId } });
+  revalidatePath(`/admin/challenges/${challengeId}`);
   revalidatePath('/admin/challenges');
   revalidatePath('/challenges');
 }
@@ -62,21 +82,33 @@ export default async function AdminChallengeDetailPage({ params }: { params: { i
   return (
     <div className="space-y-4 text-black">
       <h1 className="text-2xl font-bold">Challenge: {challenge.name}</h1>
-      <p><strong>Compétitions:</strong> {challenge.competitions.map((item) => item.competition.name).join(', ')}</p>
-      <p><strong>Période:</strong> {new Date(challenge.startDate).toLocaleDateString()} - {new Date(challenge.endDate).toLocaleDateString()}</p>
-      <p><strong>Récompense:</strong> {challenge.reward ?? 'Aucune'}</p>
 
       <form action={updateChallenge} className="grid gap-2 rounded-2xl bg-white p-4 md:grid-cols-2">
         <input type="hidden" name="id" defaultValue={challenge.id} />
         <input name="name" defaultValue={challenge.name} className="rounded border p-2" required />
         <input name="slug" defaultValue={challenge.slug} className="rounded border p-2" />
-        <select multiple name="competitionIds" className="rounded border p-2 md:col-span-2" defaultValue={Array.from(selectedCompetitionIds)} required>
-          {competitions.map((competition) => (
-            <option key={competition.id} value={competition.id}>{competition.name}</option>
-          ))}
-        </select>
+        <div className="rounded border p-2 md:col-span-2">
+          <p className="mb-2 text-sm font-semibold">Compétitions</p>
+          <div className="flex flex-wrap gap-2">
+            {competitions.map((competition) => (
+              <label key={competition.id} className="cursor-pointer rounded-full border px-3 py-1 text-sm has-[:checked]:border-orange-400 has-[:checked]:text-orange-500">
+                <input defaultChecked={selectedCompetitionIds.has(competition.id)} className="sr-only" name="competitionIds" type="checkbox" value={competition.id} />
+                {competition.name}
+              </label>
+            ))}
+          </div>
+        </div>
         <label className="rounded border p-2 text-sm">Début <input className="w-full" type="date" name="startDate" defaultValue={new Date(challenge.startDate).toISOString().slice(0, 10)} required /></label>
         <label className="rounded border p-2 text-sm">Fin <input className="w-full" type="date" name="endDate" defaultValue={new Date(challenge.endDate).toISOString().slice(0, 10)} required /></label>
+        <select name="challengeType" className="rounded border p-2" defaultValue={challenge.challengeType}>
+          <option value={ChallengeType.RANKING}>Ranking</option>
+          <option value={ChallengeType.COMPLETION}>Completion</option>
+        </select>
+        <select name="completionMode" className="rounded border p-2" defaultValue={challenge.completionMode ?? ChallengeCompletionMode.CORRECT}>
+          <option value={ChallengeCompletionMode.CORRECT}>Completion sur bon résultat</option>
+          <option value={ChallengeCompletionMode.EXACT}>Completion sur score exact</option>
+        </select>
+        <input name="completionTarget" defaultValue={challenge.completionTarget ?? ''} type="number" min={1} className="rounded border p-2" placeholder="Objectif (X matchs)" />
         <input name="reward" defaultValue={challenge.reward ?? ''} className="rounded border p-2" placeholder="Récompense" />
         <textarea name="description" defaultValue={challenge.description ?? ''} className="rounded border p-2 md:col-span-2" />
         <label className="flex items-center gap-2 text-sm font-semibold"><input defaultChecked={challenge.isActive} name="isActive" type="checkbox" /> Actif</label>
@@ -87,7 +119,14 @@ export default async function AdminChallengeDetailPage({ params }: { params: { i
         <h2 className="mb-2 text-xl font-bold">Matchs inclus</h2>
         <ul className="space-y-1 text-sm">
           {challenge.fixtures.map((row) => (
-            <li key={row.id}>{row.fixture.competition.name} — {row.fixture.homeTeam.name} vs {row.fixture.awayTeam.name} ({formatMatchDateTime(row.fixture.utcKickoff)})</li>
+            <li key={row.id} className="flex items-center justify-between gap-2 rounded border p-2">
+              <span>{row.fixture.competition.name} — {row.fixture.homeTeam.name} vs {row.fixture.awayTeam.name} ({formatMatchDateTime(row.fixture.utcKickoff)})</span>
+              <form action={removeChallengeFixture}>
+                <input type="hidden" name="challengeId" value={challenge.id} />
+                <input type="hidden" name="fixtureId" value={row.fixtureId} />
+                <button className="text-red-600" title="Retirer du challenge" type="submit">❌</button>
+              </form>
+            </li>
           ))}
         </ul>
       </div>

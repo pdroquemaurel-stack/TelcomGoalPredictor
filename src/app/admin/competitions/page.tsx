@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { revalidatePath } from 'next/cache';
-import { CompetitionType } from '@prisma/client';
+import { CompetitionType, FixtureState } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
@@ -37,23 +37,20 @@ async function toggleCompetition(formData: FormData) {
   revalidatePath('/');
 }
 
-
-
-async function toggleDailyCompetition(formData: FormData) {
-  "use server";
-  const id = String(formData.get('id') ?? '');
-  const isDailyEnabled = String(formData.get('isDailyEnabled') ?? '') === 'true';
-  if (!id) return;
-  await prisma.competition.update({ where: { id }, data: { isDailyEnabled: !isDailyEnabled } });
-  revalidatePath('/admin/competitions');
-  revalidatePath('/');
-  revalidatePath('/daily');
-}
 export default async function Page() {
-  const comps = await prisma.competition.findMany({
-    orderBy: [{ displayOrder: 'asc' }, { name: 'asc' }],
-    include: { _count: { select: { fixtures: true } } },
-  });
+  const [comps, finishedByCompetition] = await Promise.all([
+    prisma.competition.findMany({
+      orderBy: [{ displayOrder: 'asc' }, { name: 'asc' }],
+      include: { _count: { select: { fixtures: true } } },
+    }),
+    prisma.fixture.groupBy({
+      by: ['competitionId'],
+      where: { fixtureState: { in: [FixtureState.FINISHED, FixtureState.SETTLED] } },
+      _count: { _all: true },
+    }),
+  ]);
+
+  const finishedMap = new Map(finishedByCompetition.map((row) => [row.competitionId, row._count._all]));
 
   return (
     <div className="space-y-4 text-black">
@@ -71,11 +68,12 @@ export default async function Page() {
       <div className="overflow-auto rounded-2xl bg-white p-4">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left"><th>Name</th><th>Type</th><th>Status</th><th>Flux quotidien</th><th>Matches</th><th>Action</th></tr>
+            <tr className="text-left"><th>Name</th><th>Type</th><th>Status</th><th>Matches</th><th>Action</th></tr>
           </thead>
           <tbody>
             {comps.map((competition) => {
               const targetUrl = `/admin/fixtures?competitionId=${competition.id}`;
+              const finished = finishedMap.get(competition.id) ?? 0;
               return (
                 <tr key={competition.id} className="border-t transition hover:bg-zinc-50">
                   <td className="py-2">
@@ -98,20 +96,7 @@ export default async function Page() {
                     </Link>
                   </td>
                   <td>
-                    <form action={toggleDailyCompetition}>
-                      <input type="hidden" name="id" value={competition.id} />
-                      <input type="hidden" name="isDailyEnabled" value={String(competition.isDailyEnabled)} />
-                      <button
-                        aria-label={`Toggle daily competition ${competition.name}`}
-                        className={`relative inline-flex h-7 w-12 items-center rounded-full p-1 transition ${competition.isDailyEnabled ? 'bg-brand' : 'bg-zinc-300'}`}
-                        type="submit"
-                      >
-                        <span className={`h-5 w-5 rounded-full bg-white shadow transition ${competition.isDailyEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
-                      </button>
-                    </form>
-                  </td>
-                  <td>
-                    <Link className="block w-full" href={targetUrl}>{competition._count.fixtures}</Link>
+                    <Link className="block w-full" href={targetUrl}>{finished} / {competition._count.fixtures}</Link>
                   </td>
                   <td>
                     <form action={toggleCompetition}>

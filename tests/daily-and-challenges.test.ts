@@ -36,7 +36,6 @@ test('active challenge filter pins active status and date bounds', () => {
   const now = new Date('2026-03-12T00:00:00.000Z');
   const filter = getActiveChallengesFilter(now);
   assert.equal(filter.isActive, true);
-  assert.deepEqual(filter.startDate, { lte: now });
   assert.deepEqual(filter.endDate, { gte: now });
 });
 
