@@ -5,6 +5,7 @@ import { getDailyFixturesForUser } from '@/lib/services/daily-service';
 import { getActiveChallengesFilter } from '@/lib/services/challenge-service';
 import { requireOnboardedUser } from '@/lib/player-access';
 import { formatMatchDateTime } from '@/lib/date-format';
+import { getAppConfig } from '@/lib/app-config';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -17,9 +18,10 @@ export default async function HomePage() {
   const { me, profile } = await requireOnboardedUser();
   const userId = me.id;
 
-  const [daily, availableChallenges] = await Promise.all([
+  const [daily, availableChallenges, config] = await Promise.all([
     getDailyFixturesForUser(userId),
     prisma.challenge.count({ where: getActiveChallengesFilter() }),
+    getAppConfig(),
   ]);
 
   const dailyFixtures = daily.today;
@@ -31,9 +33,9 @@ export default async function HomePage() {
   return (
     <main className="mx-auto max-w-md space-y-4 px-4 pb-28 pt-5">
       <header className="card border-brand bg-brand/10">
-        <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-300">Bienvenue</p>
+        <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-300">{config.appName}</p>
         <h1 className="mt-1 text-2xl font-black">Salut {getFirstName(profile.displayName)} 👋</h1>
-        <p className="mt-2 text-sm text-zinc-200">Prêt à grimper au classement aujourd’hui ?</p>
+        <p className="mt-2 text-sm text-zinc-200">{config.welcomeMessage}</p>
       </header>
 
       <section className="card">
@@ -70,10 +72,15 @@ export default async function HomePage() {
       </section>
 
       <section className="card">
+        <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-300">{config.appTagline}</p>
+        <p className="mt-1 text-xs text-zinc-300">{config.homeBannerMessage}</p>
+      </section>
+
+      {config.showChallengesBlock && <section className="card">
         <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-300">Compétitions & challenges</p>
         <p className="mt-2 text-sm text-zinc-100">{availableChallenges} challenge(s) actif(s)</p>
         <p className="text-xs text-zinc-300">{hasOpen ? 'Des matchs sont disponibles aujourd’hui.' : 'Pas de match ouvert actuellement.'}</p>
-      </section>
+      </section>}
 
       <PlayerNav />
     </main>

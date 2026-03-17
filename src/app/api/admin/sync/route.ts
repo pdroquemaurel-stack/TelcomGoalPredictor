@@ -4,13 +4,16 @@ import { syncCompetitions, syncFixtures } from '@/lib/sync';
 import { settleFinishedFixtures } from '@/lib/services/settlement-service';
 import { apiError, apiSuccess } from '@/lib/api';
 import { buildAdminSyncWindow } from '@/lib/admin-sync-window';
+import { prisma } from '@/lib/prisma';
 import { type AdminSyncStep, formatAdminSyncError, validateAdminSyncConfig } from '@/lib/admin-sync-diagnostics';
 
 export async function POST() {
   let currentStep: AdminSyncStep = 'auth';
+  let actorUserId: string | undefined;
 
   try {
     const session = await getServerSession(authOptions);
+    actorUserId = (session?.user as any)?.id;
     const role = (session?.user as any)?.role;
     if (!session?.user || (role !== 'ADMIN' && role !== 'EDITOR')) {
       return apiError('FORBIDDEN', 'Admin role required.', 403);
@@ -34,6 +37,23 @@ export async function POST() {
     currentStep = 'settleFinishedFixtures';
     const settlement = await settleFinishedFixtures();
 
+    await prisma.auditLog.create({
+      data: {
+        actorUserId: actorUserId ?? null,
+        action: 'ADMIN_SYNC_SUCCESS',
+        targetType: 'SYNC',
+        metadata: {
+          from,
+          to,
+          competitionsSynced: competitions.syncedCount,
+          fixturesCreated: fixtures.created,
+          fixturesUpdated: fixtures.updated,
+          fixturesFetched: fixtures.totalFetched,
+          settlement,
+        },
+      },
+    });
+
     return apiSuccess({
       from,
       to,
@@ -45,6 +65,18 @@ export async function POST() {
     });
   } catch (error) {
     const formatted = formatAdminSyncError(currentStep, error);
+
+    if (actorUserId) {
+      await prisma.auditLog.create({
+        data: {
+          actorUserId,
+          action: 'ADMIN_SYNC_FAILURE',
+          targetType: 'SYNC',
+          metadata: { step: currentStep, message: formatted.message, details: formatted.details },
+        },
+      });
+    }
+
     console.error('[admin-sync] sync failed', {
       step: currentStep,
       error: error instanceof Error ? error.message : error,

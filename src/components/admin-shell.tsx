@@ -7,6 +7,7 @@ const links = [
   ['/admin/challenges', 'Challenges'],
   ['/admin/fixtures', 'Matches'],
   ['/admin/operations', 'Operations'],
+  ['/admin/settings', 'Settings'],
   ['/admin/users', 'Users'],
   ['/admin/badges', 'Badges'],
 ];
