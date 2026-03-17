@@ -9,7 +9,7 @@ export function LogoutButton() {
       onClick={() => signOut({ callbackUrl: '/auth/signin' })}
       type="button"
     >
-      Se déconnecter
+      Je me casse de là
     </button>
   );
 }
