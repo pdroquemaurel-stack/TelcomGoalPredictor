@@ -77,6 +77,12 @@ enum PurchaseStatus {
   FAILED
 }
 
+enum BadgeCriterionType {
+  PREDICTION_COUNT
+  CORRECT_PREDICTION_COUNT
+  EXACT_PREDICTION_COUNT
+}
+
 model User {
   id           String     @id @default(cuid())
   email        String     @unique
@@ -412,11 +418,19 @@ model Purchase {
 }
 
 model Badge {
-  id          String      @id @default(cuid())
-  code        String      @unique
-  name        String
-  description String
-  users       UserBadge[]
+  id            String            @id @default(cuid())
+  slug          String            @unique
+  name          String
+  description   String            @default("")
+  criterionType BadgeCriterionType
+  threshold     Int
+  isActive      Boolean           @default(true)
+  displayOrder  Int               @default(0)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  users         UserBadge[]
+
+  @@index([isActive, displayOrder])
 }
 
 model UserBadge {

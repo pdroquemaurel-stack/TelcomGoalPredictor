@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { calculatePredictionPoints, isFixtureFinished, SCORING_RULES } from '@/lib/scoring';
 import { rebuildLeaderboards } from '@/lib/services/leaderboard-service';
 import { levelFromPoints } from '@/lib/utils';
+import { assignBadgesForUser } from '@/lib/services/badge-service';
 
 function computeStreak(points: number[]): { currentStreak: number; bestStreak: number } {
   let currentStreak = 0;
@@ -118,6 +119,7 @@ export async function settleFinishedFixtures(prismaClient: PrismaClient = prisma
 
   for (const userId of impactedUserIds) {
     await rebuildProfileTotals(userId, prismaClient);
+    await assignBadgesForUser(userId, prismaClient);
   }
 
   await rebuildLeaderboards(LeaderboardScope.AFRICA, LeaderboardPeriod.ALL_TIME, prismaClient);
