@@ -1,18 +1,17 @@
-export type BadgeRuleType = 'total_predictions' | 'winning_predictions' | 'exact_predictions';
+import { BadgeCriterionType } from '@prisma/client';
+import { type BadgeProgress, isBadgeEarned } from '@/lib/badges';
+
+export type BadgeRuleType = BadgeCriterionType;
 
 export type BadgeRule = {
   type: BadgeRuleType;
   threshold: number;
 };
 
-export type BadgeProgress = {
-  totalPredictions: number;
-  winningPredictions: number;
-  exactPredictions: number;
-};
+export { type BadgeProgress };
 
-export function isBadgeEarned(rule: BadgeRule, progress: BadgeProgress) {
-  if (rule.type === 'total_predictions') return progress.totalPredictions >= rule.threshold;
-  if (rule.type === 'winning_predictions') return progress.winningPredictions >= rule.threshold;
-  return progress.exactPredictions >= rule.threshold;
+export function isBadgeRuleEarned(rule: BadgeRule, progress: BadgeProgress) {
+  return isBadgeEarned(rule.type, rule.threshold, progress);
 }
+
+export { isBadgeRuleEarned as isBadgeEarned };

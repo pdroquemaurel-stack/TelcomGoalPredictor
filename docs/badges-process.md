@@ -1,36 +1,37 @@
-# Processus MVP — ajouter des badges (.webp)
+# Processus — badges dynamiques (admin)
 
-## 1) Assets image
-- Emplacement recommandé: `public/badges/`
-- Format: `.webp`
-- Convention de nommage: `<badge.code>.webp` (ex: `predictions-10.webp`)
+## Convention image (obligatoire)
+- Dossier: `public/badges/`
+- Convention: `<badge.slug>.webp`
+- Fallback automatique: `/badges/badge.webp`
 
-## 2) Enregistrement en base
-Créer un badge dans la table `Badge` avec:
-- `code` (unique, slug stable)
-- `name`
-- `description`
+Exemple:
+- name: `10 Bons Pronos`
+- slug: `10-bons-pronos`
+- image: `public/badges/10-bons-pronos.webp`
+- fallback si absent: `/badges/badge.webp`
 
-Exemple SQL:
-```sql
-INSERT INTO "Badge" ("id", "code", "name", "description")
-VALUES (gen_random_uuid()::text, 'predictions-10', '10 pronostics', 'Atteindre 10 pronostics enregistrés');
-```
+## Création d’un badge via l’admin
+Depuis `/admin/badges`, un admin peut créer un badge avec:
+- `name` (nom affiché)
+- `slug` (identifiant technique stable)
+- `criterionType`
+- `threshold`
 
-## 3) Règle d’obtention
-Le mapping de règles MVP est centralisé dans `src/lib/badge-rules.ts`.
-Types supportés:
-- `total_predictions`
-- `winning_predictions`
-- `exact_predictions`
+Le slug est prérempli à partir du nom, puis modifiable avant validation.
 
-## 4) Attribution / recalcul
-- Le recalcul peut être déclenché depuis l’admin (onglet **Badge**) via un futur script/job dédié.
-- Entrées nécessaires: 
-  - total pronostics utilisateur,
-  - pronostics gagnants,
-  - scores exacts.
-- Ensuite, créer les associations dans `UserBadge` pour les badges validés.
+## Critères disponibles
+- `PREDICTION_COUNT`: nombre total de pronostics saisis
+- `CORRECT_PREDICTION_COUNT`: nombre de bons résultats (victoire/défaite/égalité)
+- `EXACT_PREDICTION_COUNT`: nombre de scores exacts
 
-## 5) Affichage
-La page profil charge tous les badges, affiche en premier ceux obtenus, puis les non obtenus (grisés) dans un carousel horizontal.
+## Règle d’attribution
+Le badge est attribué automatiquement si la valeur du critère est `>= threshold`.
+
+Attribution déclenchée:
+- après sauvegarde d’un pronostic (utile pour `PREDICTION_COUNT`)
+- après settlement des matchs (utile pour `CORRECT_PREDICTION_COUNT` et `EXACT_PREDICTION_COUNT`)
+
+Les doublons sont empêchés par:
+- contrainte DB `@@unique([userId, badgeId])` sur `UserBadge`
+- `createMany(..., skipDuplicates: true)` dans le service d’attribution.

@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { apiError, apiSuccess } from '@/lib/api';
 import { canSubmitPrediction } from '@/lib/services/prediction-rules';
 import { getSessionUserId } from '@/lib/auth-session';
+import { assignBadgesForUser } from '@/lib/services/badge-service';
 
 
 const schema = z.object({
@@ -49,6 +50,8 @@ export async function POST(req: Request) {
         awayScore: parsed.data.awayScore,
       },
     });
+
+    await assignBadgesForUser(userId, prisma);
 
     return apiSuccess({ prediction });
   } catch (error) {

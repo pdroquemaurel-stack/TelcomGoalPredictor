@@ -1,4 +1,4 @@
-import { CompetitionType, FixtureState, PrismaClient, UserRole } from '@prisma/client';
+import { BadgeCriterionType, CompetitionType, FixtureState, PrismaClient, UserRole } from '@prisma/client';
 import { normalizeTeamNameToLogoFile } from '@/lib/team-logo';
 import { hash } from 'bcryptjs';
 import { settleFinishedFixtures } from '@/lib/services/settlement-service';
@@ -133,6 +133,21 @@ async function main() {
   }
 
   await settleFinishedFixtures(prisma);
+
+
+  const badgeSeeds = [
+    { slug: '1-prono', name: '1 Prono', criterionType: BadgeCriterionType.PREDICTION_COUNT, threshold: 1, description: 'Premier pronostic validé.' },
+    { slug: '3-bons-pronos', name: '3 Bons Pronos', criterionType: BadgeCriterionType.CORRECT_PREDICTION_COUNT, threshold: 3, description: 'Trois bons résultats pronostiqués.' },
+    { slug: '1-score-exact', name: '1 Score Exact', criterionType: BadgeCriterionType.EXACT_PREDICTION_COUNT, threshold: 1, description: 'Premier score exact trouvé.' },
+  ];
+
+  for (const badge of badgeSeeds) {
+    await prisma.badge.upsert({
+      where: { slug: badge.slug },
+      update: badge,
+      create: badge,
+    });
+  }
 
   console.log('Seed complete. Admin: admin / admin | Players: joueur1 / joueur1, joueur2 / joueur2');
 }
