@@ -7,6 +7,7 @@ import { canSubmitPrediction } from '@/lib/services/prediction-rules';
 import { getSessionUserId } from '@/lib/auth-session';
 import { assignBadgesForUser } from '@/lib/services/badge-service';
 import { trackApiRequest } from '@/lib/api-analytics';
+import { calculatePredictionActivityStreak, isDoublePointsStreakActive } from '@/lib/profile-streak';
 
 
 const schema = z.object({
@@ -41,6 +42,17 @@ export async function POST(req: Request) {
       });
     }
 
+    const activityPredictions = await prisma.prediction.findMany({
+      where: { userId },
+      select: { createdAt: true },
+    });
+
+    const activityStreak = calculatePredictionActivityStreak([
+      ...activityPredictions.map((prediction) => prediction.createdAt),
+      new Date(),
+    ]);
+    const pointsMultiplier = isDoublePointsStreakActive(activityStreak) ? 2 : 1;
+
     const prediction = await prisma.prediction.upsert({
       where: { userId_fixtureId: { userId, fixtureId: fixture.id } },
       create: {
@@ -48,10 +60,12 @@ export async function POST(req: Request) {
         fixtureId: fixture.id,
         homeScore: parsed.data.homeScore,
         awayScore: parsed.data.awayScore,
+        pointsMultiplier,
       },
       update: {
         homeScore: parsed.data.homeScore,
         awayScore: parsed.data.awayScore,
+        pointsMultiplier,
       },
     });
 

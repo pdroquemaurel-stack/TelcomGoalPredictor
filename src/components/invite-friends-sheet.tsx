@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 
 type SearchResult = {
   username: string;
@@ -15,6 +15,17 @@ export function InviteFriendsSheet({ username, friendCode }: { username: string;
   const [result, setResult] = useState<SearchResult | null>(null);
 
   const trimmedQuery = useMemo(() => query.trim(), [query]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [open]);
 
   const onSearch = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -71,13 +82,36 @@ export function InviteFriendsSheet({ username, friendCode }: { username: string;
   const shareText = `Je te challenge sur TelcomGoalPredictor ⚽️ ! Rejoins-moi avec mon code joueur: ${friendCode}`;
   const whatsappLink = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
 
+  const onShare = async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: 'TelcomGoalPredictor',
+          text: shareText,
+        });
+        return;
+      }
+
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareText);
+        setFeedback('Lien/copie du message prêt ✅ Tu peux le coller dans l’app de ton choix.');
+        return;
+      }
+    } catch (error) {
+      const shareError = error as { name?: string };
+      if (shareError?.name === 'AbortError') return;
+    }
+
+    window.open(whatsappLink, '_blank', 'noopener,noreferrer');
+  };
+
   return (
     <>
       <button className="cta-primary w-full text-center" type="button" onClick={() => setOpen(true)}>Inviter des amis</button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-3 md:items-center">
-          <section className="w-full max-w-md rounded-3xl border border-white/20 bg-zinc-950 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 sm:p-4">
+          <section className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-3xl border border-white/20 bg-zinc-950 p-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-black">Inviter des amis</h3>
               <button type="button" className="rounded-xl border border-white/20 px-3 py-1 text-xs font-bold" onClick={() => setOpen(false)}>Fermer</button>
@@ -111,9 +145,9 @@ export function InviteFriendsSheet({ username, friendCode }: { username: string;
             <div className="mt-3 rounded-2xl border border-white/10 bg-zinc-900 p-3">
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-zinc-400">Partager ton code joueur</p>
               <p className="mt-2 text-sm text-zinc-200">@{username} • code: <span className="font-black text-brand">{friendCode}</span></p>
-              <a className="mt-3 block w-full rounded-2xl bg-brand px-3 py-2 text-center text-sm font-black text-black" href={whatsappLink} rel="noreferrer" target="_blank">
-                Partager sur WhatsApp
-              </a>
+              <button className="mt-3 block w-full rounded-2xl bg-brand px-3 py-2 text-center text-sm font-black text-black" onClick={onShare} type="button">
+                Partager
+              </button>
             </div>
 
             {feedback && <p className="mt-3 rounded-xl border border-white/15 bg-zinc-900 px-3 py-2 text-sm">{feedback}</p>}

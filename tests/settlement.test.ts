@@ -21,6 +21,7 @@ type StorePrediction = {
   homeScore: number;
   awayScore: number;
   pointsAwarded: number;
+  pointsMultiplier: number;
 };
 
 type StoreProfile = {
@@ -171,9 +172,9 @@ function createMockPrisma() {
 
 test('scoreFixturePredictions computes points for each prediction', () => {
   const predictions = [
-    { id: 'p1', userId: 'u1', homeScore: 2, awayScore: 1, pointsAwarded: 0 },
-    { id: 'p2', userId: 'u2', homeScore: 1, awayScore: 0, pointsAwarded: 0 },
-    { id: 'p3', userId: 'u3', homeScore: 0, awayScore: 2, pointsAwarded: 0 },
+    { id: 'p1', userId: 'u1', homeScore: 2, awayScore: 1, pointsAwarded: 0, pointsMultiplier: 1 },
+    { id: 'p2', userId: 'u2', homeScore: 1, awayScore: 0, pointsAwarded: 0, pointsMultiplier: 1 },
+    { id: 'p3', userId: 'u3', homeScore: 0, awayScore: 2, pointsAwarded: 0, pointsMultiplier: 1 },
   ];
 
   const scored = scoreFixturePredictions(2, 1, predictions);
@@ -182,6 +183,20 @@ test('scoreFixturePredictions computes points for each prediction', () => {
     { id: 'p1', userId: 'u1', computedPoints: 3 },
     { id: 'p2', userId: 'u2', computedPoints: 1 },
     { id: 'p3', userId: 'u3', computedPoints: 0 },
+  ]);
+});
+
+
+
+test('scoreFixturePredictions applies points multiplier once when streak bonus is active', () => {
+  const predictions = [
+    { id: 'p1', userId: 'u1', homeScore: 2, awayScore: 1, pointsAwarded: 0, pointsMultiplier: 2 },
+  ];
+
+  const scored = scoreFixturePredictions(2, 1, predictions);
+
+  assert.deepEqual(scored, [
+    { id: 'p1', userId: 'u1', computedPoints: 6 },
   ]);
 });
 
@@ -217,6 +232,7 @@ test('settlement + resettlement remain idempotent and rescore correctly after sc
     homeScore: 2,
     awayScore: 1,
     pointsAwarded: 0,
+    pointsMultiplier: 1,
   });
 
   const firstSettlement = await settleFinishedFixtures(prisma);
