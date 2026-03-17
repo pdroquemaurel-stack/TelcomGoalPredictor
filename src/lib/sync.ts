@@ -3,6 +3,20 @@ import { prisma } from '@/lib/prisma';
 import { footballProvider } from '@/lib/football';
 import { isFixtureFinished } from '@/lib/scoring';
 
+export type CompetitionSyncResult = {
+  syncedCount: number;
+  totalFetched: number;
+};
+
+export type FixtureSyncResult = {
+  created: number;
+  updated: number;
+  skipped: number;
+  totalFetched: number;
+  totalProcessed: number;
+  errors: string[];
+};
+
 export function mapFixtureState(statusText: string, homeScore?: number | null, awayScore?: number | null) {
   if (isFixtureFinished(statusText, homeScore ?? null, awayScore ?? null)) {
     return { fixtureState: FixtureState.FINISHED, predictionEnabled: false };
@@ -49,7 +63,7 @@ export async function syncCompetitions() {
     });
   }
 
-  return { syncedCount };
+  return { syncedCount, totalFetched: competitions.length } satisfies CompetitionSyncResult;
 }
 
 export async function syncFixtures(from: string, to: string) {
@@ -58,85 +72,110 @@ export async function syncFixtures(from: string, to: string) {
 
   let created = 0;
   let updated = 0;
+  let skipped = 0;
+  const errors: string[] = [];
+
   for (const fixtureData of fixtures) {
-    const competition = await prisma.competition.findUnique({ where: { externalId: fixtureData.competitionExternalId } });
-    if (!competition) continue;
+    try {
+      if (!fixtureData.competitionExternalId || fixtureData.competitionExternalId === 'undefined') {
+        skipped += 1;
+        errors.push(`Fixture ${fixtureData.externalId}: missing competition id from provider.`);
+        continue;
+      }
 
-    const homeTeam = await prisma.team.upsert({
-      where: { externalId: fixtureData.homeTeamExternalId },
-      create: {
-        externalId: fixtureData.homeTeamExternalId,
-        name: fixtureData.homeTeamName,
-        shortName: fixtureData.homeTeamShortName ?? null,
-        crestUrl: fixtureData.homeTeamCrest ?? null,
-      },
-      update: {
-        name: fixtureData.homeTeamName,
-        shortName: fixtureData.homeTeamShortName ?? null,
-        crestUrl: fixtureData.homeTeamCrest ?? null,
-      },
-    });
+      const competition = await prisma.competition.findUnique({ where: { externalId: fixtureData.competitionExternalId } });
+      if (!competition) {
+        skipped += 1;
+        errors.push(`Fixture ${fixtureData.externalId}: competition ${fixtureData.competitionExternalId} not found locally.`);
+        continue;
+      }
 
-    const awayTeam = await prisma.team.upsert({
-      where: { externalId: fixtureData.awayTeamExternalId },
-      create: {
-        externalId: fixtureData.awayTeamExternalId,
-        name: fixtureData.awayTeamName,
-        shortName: fixtureData.awayTeamShortName ?? null,
-        crestUrl: fixtureData.awayTeamCrest ?? null,
-      },
-      update: {
-        name: fixtureData.awayTeamName,
-        shortName: fixtureData.awayTeamShortName ?? null,
-        crestUrl: fixtureData.awayTeamCrest ?? null,
-      },
-    });
+      const homeTeam = await prisma.team.upsert({
+        where: { externalId: fixtureData.homeTeamExternalId },
+        create: {
+          externalId: fixtureData.homeTeamExternalId,
+          name: fixtureData.homeTeamName,
+          shortName: fixtureData.homeTeamShortName ?? null,
+          crestUrl: fixtureData.homeTeamCrest ?? null,
+        },
+        update: {
+          name: fixtureData.homeTeamName,
+          shortName: fixtureData.homeTeamShortName ?? null,
+          crestUrl: fixtureData.homeTeamCrest ?? null,
+        },
+      });
 
-    const existing = await prisma.fixture.findUnique({
-      where: { externalId: fixtureData.externalId },
-      select: { id: true, homeScore: true, awayScore: true, fixtureState: true },
-    });
+      const awayTeam = await prisma.team.upsert({
+        where: { externalId: fixtureData.awayTeamExternalId },
+        create: {
+          externalId: fixtureData.awayTeamExternalId,
+          name: fixtureData.awayTeamName,
+          shortName: fixtureData.awayTeamShortName ?? null,
+          crestUrl: fixtureData.awayTeamCrest ?? null,
+        },
+        update: {
+          name: fixtureData.awayTeamName,
+          shortName: fixtureData.awayTeamShortName ?? null,
+          crestUrl: fixtureData.awayTeamCrest ?? null,
+        },
+      });
 
-    const mergedScores = mergeFixtureScores(
-      { homeScore: existing?.homeScore ?? null, awayScore: existing?.awayScore ?? null },
-      { homeScore: fixtureData.homeScore, awayScore: fixtureData.awayScore },
-    );
+      const existing = await prisma.fixture.findUnique({
+        where: { externalId: fixtureData.externalId },
+        select: { id: true, homeScore: true, awayScore: true, fixtureState: true },
+      });
 
-    const { fixtureState, predictionEnabled } = mapFixtureState(
-      fixtureData.statusText,
-      mergedScores.homeScore,
-      mergedScores.awayScore,
-    );
+      const mergedScores = mergeFixtureScores(
+        { homeScore: existing?.homeScore ?? null, awayScore: existing?.awayScore ?? null },
+        { homeScore: fixtureData.homeScore, awayScore: fixtureData.awayScore },
+      );
 
-    const nextFixtureState = existing?.fixtureState === FixtureState.SETTLED ? FixtureState.SETTLED : fixtureState;
+      const { fixtureState, predictionEnabled } = mapFixtureState(
+        fixtureData.statusText,
+        mergedScores.homeScore,
+        mergedScores.awayScore,
+      );
 
-    if (existing) updated += 1;
-    else created += 1;
+      const nextFixtureState = existing?.fixtureState === FixtureState.SETTLED ? FixtureState.SETTLED : fixtureState;
 
-    await prisma.fixture.upsert({
-      where: { externalId: fixtureData.externalId },
-      create: {
-        externalId: fixtureData.externalId,
-        competitionId: competition.id,
-        homeTeamId: homeTeam.id,
-        awayTeamId: awayTeam.id,
-        utcKickoff: new Date(fixtureData.utcKickoff),
-        statusText: fixtureData.statusText,
-        fixtureState,
-        predictionEnabled,
-        homeScore: mergedScores.homeScore,
-        awayScore: mergedScores.awayScore,
-      },
-      update: {
-        statusText: fixtureData.statusText,
-        fixtureState: nextFixtureState,
-        predictionEnabled: nextFixtureState === FixtureState.SETTLED ? false : predictionEnabled,
-        utcKickoff: new Date(fixtureData.utcKickoff),
-        homeScore: mergedScores.homeScore,
-        awayScore: mergedScores.awayScore,
-      },
-    });
+      if (existing) updated += 1;
+      else created += 1;
+
+      await prisma.fixture.upsert({
+        where: { externalId: fixtureData.externalId },
+        create: {
+          externalId: fixtureData.externalId,
+          competitionId: competition.id,
+          homeTeamId: homeTeam.id,
+          awayTeamId: awayTeam.id,
+          utcKickoff: new Date(fixtureData.utcKickoff),
+          statusText: fixtureData.statusText,
+          fixtureState,
+          predictionEnabled,
+          homeScore: mergedScores.homeScore,
+          awayScore: mergedScores.awayScore,
+        },
+        update: {
+          statusText: fixtureData.statusText,
+          fixtureState: nextFixtureState,
+          predictionEnabled: nextFixtureState === FixtureState.SETTLED ? false : predictionEnabled,
+          utcKickoff: new Date(fixtureData.utcKickoff),
+          homeScore: mergedScores.homeScore,
+          awayScore: mergedScores.awayScore,
+        },
+      });
+    } catch (error) {
+      skipped += 1;
+      errors.push(`Fixture ${fixtureData.externalId}: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 
-  return { created, updated, totalFetched: fixtures.length };
+  return {
+    created,
+    updated,
+    skipped,
+    totalFetched: fixtures.length,
+    totalProcessed: created + updated,
+    errors,
+  } satisfies FixtureSyncResult;
 }

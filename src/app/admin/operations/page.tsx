@@ -50,7 +50,10 @@ export default function AdminOperationsPage() {
     const res = await fetch('/api/admin/sync', { method: 'POST' });
     const body = await res.json();
     if (res.ok) {
-      setResult(`✅ Sync ok • compétitions: ${body.data.competitionsSynced}, matchs créés: ${body.data.fixturesCreated}, matchs mis à jour: ${body.data.fixturesUpdated}`);
+      const warningSuffix = body.data.errors?.length
+        ? ` • ⚠️ anomalies: ${body.data.errors.length}`
+        : '';
+      setResult(`✅ Sync ok • compétitions: ${body.data.competitionsSynced}, matchs créés: ${body.data.fixturesCreated}, matchs mis à jour: ${body.data.fixturesUpdated}, matchs ignorés: ${body.data.fixturesSkipped}, settled: ${body.data.settlement.settledFixturesCount}, resettled: ${body.data.settlement.resettledFixturesCount}${warningSuffix}`);
       await loadSummary();
     } else {
       const message = body?.error?.message ?? 'Erreur inconnue';
