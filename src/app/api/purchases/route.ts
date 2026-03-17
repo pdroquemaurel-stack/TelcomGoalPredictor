@@ -12,5 +12,5 @@ export async function POST(req: Request) {
   const parsed = schema.safeParse(await req.json());
   if (!parsed.success) return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
   const purchase = await prisma.purchase.create({ data: { productId: parsed.data.productId, userId: (session.user as any).id } });
-  return NextResponse.json({ ok: true, purchase, message: 'Mock checkout complete. Payment integration coming soon.' });
+  return NextResponse.json({ ok: true, purchase, message: 'Mock checkout complete for MVP demo mode.' });
 }
