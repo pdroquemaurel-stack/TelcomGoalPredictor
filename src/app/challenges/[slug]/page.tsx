@@ -1,5 +1,4 @@
 import { notFound } from 'next/navigation';
-import { ChallengeCompletionMode, ChallengeType } from '@prisma/client';
 import { getChallengeDetailBySlug, getChallengeLeaderboard } from '@/lib/services/challenge-service';
 import { PlayerNav } from '@/components/player-nav';
 import { ChallengeFixturesClient } from '@/app/challenges/[slug]/challenge-fixtures-client';
@@ -23,7 +22,7 @@ export default async function ChallengeDetailPage({ params }: { params: { slug: 
     const finalDiff = fixture.finalScore.homeScore - fixture.finalScore.awayScore;
     const correct = (predictedDiff === 0 && finalDiff === 0) || (predictedDiff > 0 && finalDiff > 0) || (predictedDiff < 0 && finalDiff < 0);
     const exact = fixture.savedPrediction.homeScore === fixture.finalScore.homeScore && fixture.savedPrediction.awayScore === fixture.finalScore.awayScore;
-    if (challenge.completionMode === ChallengeCompletionMode.EXACT) return exact;
+    if (challenge.completionMode === 'EXACT') return exact;
     return correct;
   }).length;
   const isCompleted = completionTarget > 0 && completionHits >= completionTarget;
@@ -40,14 +39,14 @@ export default async function ChallengeDetailPage({ params }: { params: { slug: 
 
       {challenge.description && <section className="card text-sm text-zinc-200">{challenge.description}</section>}
 
-      {challenge.challengeType === ChallengeType.COMPLETION && completionTarget > 0 && (
+      {challenge.challengeType === 'COMPLETION' && completionTarget > 0 && (
         <section className="card">
           <h2 className="section-title">Progression</h2>
           <div className="mt-3 flex flex-wrap gap-2">
             {Array.from({ length: completionTarget }).map((_, index) => {
               const done = index < completionHits;
               return (
-                <span key={`dot-${index + 1}`} className={`h-5 w-5 rounded-full border-2 border-orange-400 ${done && challenge.completionMode === ChallengeCompletionMode.EXACT ? 'bg-orange-400/40' : ''}`} />
+                <span key={`dot-${index + 1}`} className={`h-5 w-5 rounded-full border-2 border-orange-400 ${done && challenge.completionMode === 'EXACT' ? 'bg-orange-400/40' : ''}`} />
               );
             })}
           </div>
@@ -57,18 +56,20 @@ export default async function ChallengeDetailPage({ params }: { params: { slug: 
 
       <ChallengeFixturesClient fixtures={challenge.fixtures} />
 
-      <section className="card">
-        <h2 className="section-title">Classement challenge</h2>
-        <div className="mt-2 space-y-2">
-          {leaderboard.slice(0, 10).map((row) => (
-            <div key={row.userId} className="flex items-center justify-between rounded-xl bg-black px-3 py-2 text-sm">
-              <p><strong>#{row.rank}</strong> {row.displayName}</p>
-              <p className="font-black text-brand">{row.points} pts</p>
-            </div>
-          ))}
-          {leaderboard.length === 0 && <p className="text-sm text-zinc-300">Classement disponible après les premiers résultats.</p>}
-        </div>
-      </section>
+      {challenge.challengeType === 'RANKING' && (
+        <section className="card">
+          <h2 className="section-title">Classement challenge</h2>
+          <div className="mt-2 space-y-2">
+            {leaderboard.slice(0, 10).map((row) => (
+              <div key={row.userId} className="flex items-center justify-between rounded-xl bg-black px-3 py-2 text-sm">
+                <p><strong>#{row.rank}</strong> {row.displayName}</p>
+                <p className="font-black text-brand">{row.points} pts</p>
+              </div>
+            ))}
+            {leaderboard.length === 0 && <p className="text-sm text-zinc-300">Classement disponible après les premiers résultats.</p>}
+          </div>
+        </section>
+      )}
 
       <PlayerNav />
     </main>

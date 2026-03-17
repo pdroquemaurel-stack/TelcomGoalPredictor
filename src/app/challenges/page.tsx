@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { ChallengeType } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getActiveChallengesFilter } from '@/lib/services/challenge-service';
 import { PlayerNav } from '@/components/player-nav';
@@ -53,7 +52,7 @@ export default async function ChallengesPage() {
   }
 
   const myRanks = new Map<string, number>();
-  for (const challenge of sortedChallenges.filter((item) => item.challengeType === ChallengeType.RANKING)) {
+  for (const challenge of sortedChallenges.filter((item) => item.challengeType === 'RANKING')) {
     const leaderboard = await getChallengeLeaderboard(challenge.id);
     const row = leaderboard.find((entry) => entry.userId === me.id);
     if (row) myRanks.set(challenge.id, row.rank);
@@ -79,17 +78,23 @@ export default async function ChallengesPage() {
           const exact = pred.homeScore === entry.fixture.homeScore && pred.awayScore === entry.fixture.awayScore;
           return challenge.completionMode === 'EXACT' ? exact : correct;
         }).length;
-        const completionDone = challenge.challengeType === ChallengeType.COMPLETION && (challenge.completionTarget ?? 0) > 0 && completionHits >= (challenge.completionTarget ?? 0);
+        const completionDone = challenge.challengeType === 'COMPLETION' && (challenge.completionTarget ?? 0) > 0 && completionHits >= (challenge.completionTarget ?? 0);
         return (
-          <article key={challenge.id} className="card">
+          <article key={challenge.id} className="card relative">
+            <span className="absolute right-4 top-4 rounded-full bg-zinc-900 px-3 py-1 text-sm font-black text-brand">{participantCount} 👥</span>
             <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-300">{challenge.competitions.map((item) => item.competition.name).join(' • ') || 'Multi-compétitions'}</p>
             <h2 className="text-xl font-black">{challenge.name} {myRank ? <span className="text-sm text-brand">• Rang #{myRank}</span> : null} {completionDone ? <span>✅</span> : null}</h2>
             {challenge.description && <p className="mt-1 text-sm text-zinc-200">{challenge.description}</p>}
-            <p className="mt-1 text-xs text-zinc-300">{new Date(challenge.startDate).toLocaleDateString()} → {new Date(challenge.endDate).toLocaleDateString()} • {challenge._count.fixtures} matchs • {participantCount} participants</p>
+            <p className="mt-1 text-xs text-zinc-300">{new Date(challenge.startDate).toLocaleDateString()} → {new Date(challenge.endDate).toLocaleDateString()} • {challenge._count.fixtures} matchs</p>
             {challenge.reward && <p className="mt-1 text-sm font-bold text-brand">🏆 {challenge.reward}</p>}
-            {daysToStart > 0 ? <p className="mt-1 text-sm font-semibold text-amber-300">Commence dans {daysToStart} jours</p> : null}
-            {isLive ? <p className="mt-1 text-sm font-semibold text-emerald-300">S’inscrire au challenge</p> : null}
-            <Link href={`/challenges/${challenge.slug}`} className="cta-primary mt-3 inline-block w-full text-center">Voir le challenge</Link>
+
+            {daysToStart > 0 ? (
+              <button type="button" disabled className="mt-3 w-full cursor-not-allowed rounded-2xl border border-zinc-700 bg-zinc-900 px-3 py-3 text-sm font-black text-zinc-400">Commence dans {daysToStart} jours</button>
+            ) : isLive ? (
+              <Link href={`/challenges/${challenge.slug}`} className="cta-primary mt-3 inline-block w-full text-center">S’inscrire au challenge</Link>
+            ) : (
+              <Link href={`/challenges/${challenge.slug}`} className="cta-primary mt-3 inline-block w-full text-center">Voir le challenge</Link>
+            )}
           </article>
         );
       })}

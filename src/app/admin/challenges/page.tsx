@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import { revalidatePath } from 'next/cache';
-import { ChallengeCompletionMode, ChallengeType } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { ensureChallengeFixtureLinks } from '@/lib/services/challenge-service';
+import { ChallengeTypeFields } from '@/components/challenge-type-fields';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,8 +17,8 @@ async function upsertChallenge(formData: FormData) {
   const description = String(formData.get('description') ?? '').trim();
   const reward = String(formData.get('reward') ?? '').trim();
   const isActive = String(formData.get('isActive') ?? '') === 'on';
-  const challengeType = String(formData.get('challengeType') ?? ChallengeType.RANKING) as ChallengeType;
-  const completionMode = String(formData.get('completionMode') ?? '') as ChallengeCompletionMode;
+  const challengeType = String(formData.get('challengeType') ?? 'RANKING') as 'RANKING' | 'COMPLETION';
+  const completionMode = String(formData.get('completionMode') ?? '') as 'CORRECT' | 'EXACT';
   const completionTarget = Number(formData.get('completionTarget') ?? 0);
   if (!name || !competitionIds.length || !startDate || !endDate) return;
 
@@ -31,8 +31,8 @@ async function upsertChallenge(formData: FormData) {
     reward: reward || null,
     isActive,
     challengeType,
-    completionMode: challengeType === ChallengeType.COMPLETION ? completionMode || ChallengeCompletionMode.CORRECT : null,
-    completionTarget: challengeType === ChallengeType.COMPLETION && completionTarget > 0 ? completionTarget : null,
+    completionMode: challengeType === 'COMPLETION' ? completionMode || 'CORRECT' : null,
+    completionTarget: challengeType === 'COMPLETION' && completionTarget > 0 ? completionTarget : null,
   };
 
   const challenge = id
@@ -111,15 +111,7 @@ export default async function AdminChallengesPage() {
         </div>
         <label className="rounded border p-2 text-sm">Début <input className="w-full" type="date" name="startDate" required /></label>
         <label className="rounded border p-2 text-sm">Fin <input className="w-full" type="date" name="endDate" required /></label>
-        <select name="challengeType" className="rounded border p-2" defaultValue={ChallengeType.RANKING}>
-          <option value={ChallengeType.RANKING}>Ranking</option>
-          <option value={ChallengeType.COMPLETION}>Completion</option>
-        </select>
-        <select name="completionMode" className="rounded border p-2" defaultValue={ChallengeCompletionMode.CORRECT}>
-          <option value={ChallengeCompletionMode.CORRECT}>Completion sur bon résultat</option>
-          <option value={ChallengeCompletionMode.EXACT}>Completion sur score exact</option>
-        </select>
-        <input name="completionTarget" type="number" min={1} className="rounded border p-2" placeholder="Objectif (X matchs)" />
+        <ChallengeTypeFields challengeType={'RANKING'} completionMode={'CORRECT'} completionTarget={null} />
         <input name="reward" className="rounded border p-2" placeholder="Lot / récompense (optionnel)" />
         <textarea name="description" className="rounded border p-2 md:col-span-2" placeholder="Description (optionnel)" />
         <label className="flex items-center gap-2 text-sm font-semibold"><input defaultChecked name="isActive" type="checkbox" /> Actif</label>
@@ -131,9 +123,9 @@ export default async function AdminChallengesPage() {
           <thead><tr className="text-left"><th>Nom</th><th>Compétitions</th><th>Période</th><th>Statut</th><th>Matchs</th><th>Participants</th><th>Action</th></tr></thead>
           <tbody>
             {challenges.map((challenge) => {
-              const isLive = challenge.startDate <= now && challenge.endDate >= now;
+              const isLive = challenge.isActive && challenge.startDate <= now && challenge.endDate >= now;
               return (
-                <tr key={challenge.id} className={`border-t ${isLive ? 'bg-green-100/40' : ''}`}>
+                <tr key={challenge.id} className={`border-t ${isLive ? 'bg-emerald-100/50' : ''}`}>
                   <td className="py-2 font-semibold">{challenge.name}</td>
                   <td>{challenge.competitions.map((item) => item.competition.name).join(', ')}</td>
                   <td>{new Date(challenge.startDate).toLocaleDateString()} - {new Date(challenge.endDate).toLocaleDateString()}</td>
