@@ -34,27 +34,3 @@ body {
   background: var(--brand-cta);
   box-shadow: 0 10px 20px color-mix(in oklab, var(--brand-cta) 40%, black 60%);
 }
-
-.ui-page-header {
-  @apply rounded-3xl bg-white p-5 text-black shadow-xl;
-}
-
-.ui-banner {
-  @apply rounded-2xl border px-4 py-3 text-sm font-semibold;
-}
-
-.ui-banner-info {
-  @apply border-orange-400/40 bg-orange-500/10 text-zinc-100;
-}
-
-.ui-banner-success {
-  @apply border-emerald-400/40 bg-emerald-500/10 text-emerald-100;
-}
-
-.ui-banner-error {
-  @apply border-rose-400/40 bg-rose-500/10 text-rose-100;
-}
-
-.ui-empty-state {
-  @apply rounded-2xl border border-dashed border-white/20 bg-zinc-900/50 px-4 py-5 text-sm text-zinc-300;
-}
