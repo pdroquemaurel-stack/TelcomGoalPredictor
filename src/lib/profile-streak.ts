@@ -30,3 +30,7 @@ export function calculatePredictionActivityStreak(activityDates: Date[], now = n
 
   return streak;
 }
+
+export function isDoublePointsStreakActive(streak: number) {
+  return streak >= 7;
+}

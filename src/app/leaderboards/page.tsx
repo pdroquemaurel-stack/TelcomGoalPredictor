@@ -3,6 +3,7 @@ import { PlayerNav } from '@/components/player-nav';
 import { prisma } from '@/lib/prisma';
 import { requireOnboardedUser } from '@/lib/player-access';
 import { LeaderboardPeriodFilter, getPeriodStart, toRankedRows } from '@/lib/leaderboard-period';
+import { InviteFriendsSheet } from '@/components/invite-friends-sheet';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -36,7 +37,8 @@ export default async function LeaderboardsPage({
       ? { userId: { in: [userId, ...friendIds].filter(Boolean) as string[] } }
       : undefined;
 
-  const profiles = await prisma.profile.findMany({
+  const [profiles, userIdentity] = await Promise.all([
+    prisma.profile.findMany({
     where,
     include: {
       user: {
@@ -54,7 +56,9 @@ export default async function LeaderboardsPage({
       },
       country: true,
     },
-  });
+    }),
+    prisma.user.findUnique({ where: { id: userId }, select: { username: true, friendCode: true } }),
+  ]);
 
   const rankedRows = toRankedRows(profiles.map((row) => {
     const settledPredictions = row.user.predictions.filter((prediction) => prediction.fixture.fixtureState === 'SETTLED');
@@ -64,7 +68,7 @@ export default async function LeaderboardsPage({
 
     const exactHits = period === 'all-time'
       ? row.exactHits
-      : settledPredictions.filter((prediction) => prediction.pointsAwarded >= 3).length;
+      : settledPredictions.filter((prediction) => prediction.pointsAwarded > 0 && prediction.pointsAwarded % 3 === 0).length;
 
     return {
       userId: row.userId,
@@ -140,6 +144,21 @@ export default async function LeaderboardsPage({
           </>
         )}
       </section>
+
+
+
+      {scope === 'friends' && (
+        <section className="card">
+          <h2 className="section-title">Inviter amis</h2>
+          <p className="mt-2 text-sm text-zinc-300">Ajoute des amis ou partage ton code pour monter ensemble au classement.</p>
+          <div className="mt-3">
+            <InviteFriendsSheet
+              friendCode={userIdentity?.friendCode ?? 'INDISPONIBLE'}
+              username={userIdentity?.username ?? 'player'}
+            />
+          </div>
+        </section>
+      )}
 
       <PlayerNav />
     </main>

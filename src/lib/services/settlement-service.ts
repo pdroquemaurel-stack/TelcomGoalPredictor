@@ -23,7 +23,7 @@ function computeStreak(points: number[]): { currentStreak: number; bestStreak: n
 }
 
 
-export function scoreFixturePredictions(actualHomeScore: number, actualAwayScore: number, predictions: Array<{ id: string; userId: string; homeScore: number; awayScore: number; pointsAwarded: number }>) {
+export function scoreFixturePredictions(actualHomeScore: number, actualAwayScore: number, predictions: Array<{ id: string; userId: string; homeScore: number; awayScore: number; pointsAwarded: number; pointsMultiplier: number }>) {
   return predictions.map((prediction) => ({
     id: prediction.id,
     userId: prediction.userId,
@@ -32,7 +32,7 @@ export function scoreFixturePredictions(actualHomeScore: number, actualAwayScore
       prediction.awayScore,
       actualHomeScore,
       actualAwayScore,
-    ),
+    ) * Math.max(1, prediction.pointsMultiplier),
   }));
 }
 
@@ -44,7 +44,7 @@ async function rebuildProfileTotals(userId: string, prismaClient: PrismaClient) 
   });
 
   const settledPredictions = predictions.filter((prediction) => prediction.fixture.fixtureState === FixtureState.SETTLED);
-  const exactHits = settledPredictions.filter((prediction) => prediction.pointsAwarded === SCORING_RULES.exactScore).length;
+  const exactHits = settledPredictions.filter((prediction) => prediction.pointsAwarded > 0 && prediction.pointsAwarded % SCORING_RULES.exactScore === 0).length;
   const totalPoints = settledPredictions.reduce((sum, prediction) => sum + prediction.pointsAwarded, 0);
   const scoredPoints = settledPredictions.map((prediction) => prediction.pointsAwarded);
   const { currentStreak, bestStreak } = computeStreak(scoredPoints);
@@ -78,7 +78,7 @@ export async function settleFixturesByIds(fixtureIds: string[], prismaClient: Pr
 }
 
 async function settleCandidateFixtures(
-  candidateFixtures: Array<{ id: string; statusText: string; homeScore: number | null; awayScore: number | null; fixtureState: FixtureState; predictions: Array<{ id: string; userId: string; homeScore: number; awayScore: number; pointsAwarded: number }> }>,
+  candidateFixtures: Array<{ id: string; statusText: string; homeScore: number | null; awayScore: number | null; fixtureState: FixtureState; predictions: Array<{ id: string; userId: string; homeScore: number; awayScore: number; pointsAwarded: number; pointsMultiplier: number }> }>,
   prismaClient: PrismaClient,
   options: { allowResettlement?: boolean } = {},
 ) {

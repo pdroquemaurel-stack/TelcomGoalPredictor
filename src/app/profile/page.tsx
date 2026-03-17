@@ -2,7 +2,7 @@ import { PlayerNav } from '@/components/player-nav';
 import { prisma } from '@/lib/prisma';
 import { requireOnboardedUser } from '@/lib/player-access';
 import { LogoutButton } from '@/components/logout-button';
-import { calculatePredictionActivityStreak } from '@/lib/profile-streak';
+import { calculatePredictionActivityStreak, isDoublePointsStreakActive } from '@/lib/profile-streak';
 import { resolveBadgeImagePath } from '@/lib/badge-image';
 import { InviteFriendsSheet } from '@/components/invite-friends-sheet';
 
@@ -11,10 +11,16 @@ export const revalidate = 0;
 
 function StreakDots({ streak }: { streak: number }) {
   const displayed = Math.max(1, Math.min(streak, 7));
+  const isActive = isDoublePointsStreakActive(streak);
 
   return (
-    <section className="card">
+    <section className={`card relative ${isActive ? 'border-2 border-[#FF8C00] shadow-[0_0_18px_rgba(255,140,0,0.8)]' : ''}`}>
+      {isActive && <span className="absolute -right-2 -top-3 rounded-full bg-[#FF8C00] px-3 py-1 text-lg font-black text-black">X2</span>}
       <h2 className="section-title">Streak 7 jours</h2>
+      <p className="mt-2 text-sm text-zinc-200">{streak} jour{streak > 1 ? 's' : ''} consécutif{streak > 1 ? 's' : ''}</p>
+      <p className={`mt-1 text-xs font-black uppercase tracking-[0.14em] ${isActive ? 'text-[#FF8C00]' : 'text-zinc-400'}`}>
+        {isActive ? 'Actif: bonus points X2' : 'Inactif: bonus X2 à partir de 7 jours'}
+      </p>
       <div className="mt-3 grid grid-cols-7 gap-2">
         {Array.from({ length: 7 }, (_, index) => {
           const filled = index < displayed;
