@@ -4,10 +4,10 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const links = [
-  ['/predictions', 'Pronos du jour'],
+  ['/predictions', 'Predictions'],
   ['/challenges', 'Challenges'],
-  ['/leaderboards', 'Classement'],
-  ['/profile', 'Profil'],
+  ['/leaderboards', 'Leaderboard'],
+  ['/profile', 'Profile'],
 ] as const;
 
 export function PlayerNav() {

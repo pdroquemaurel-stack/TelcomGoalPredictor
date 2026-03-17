@@ -75,7 +75,12 @@ export default async function LeaderboardsPage({
       points,
       exactHits,
     };
-  })).slice(0, 30);
+  }));
+
+  const TOP_ROWS_LIMIT = 10;
+  const topRows = rankedRows.slice(0, TOP_ROWS_LIMIT);
+  const meRow = rankedRows.find((row) => row.userId === userId);
+  const isMeInTopRows = topRows.some((row) => row.userId === userId);
 
   return (
     <main className="mx-auto max-w-md space-y-4 px-4 pb-28 pt-5">
@@ -83,6 +88,7 @@ export default async function LeaderboardsPage({
         <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-600">Classement</p>
         <h1 className="mt-1 text-3xl font-black">Leaderboard joueur</h1>
         <p className="mt-1 text-sm font-semibold">Période: {period === 'all-time' ? 'All-time' : period === 'weekly' ? '7 jours' : '30 jours'}.</p>
+        <p className="mt-3 text-center text-xl font-black text-orange-500">{rankedRows.length} joueurs classés</p>
       </header>
 
       <section className="card border-brand bg-brand/10">
@@ -103,7 +109,7 @@ export default async function LeaderboardsPage({
 
       <section className="space-y-2">
         {rankedRows.length === 0 && <article className="card text-sm text-zinc-300">Aucune donnée de classement sur cette période.</article>}
-        {rankedRows.map((row) => {
+        {topRows.map((row) => {
           const isMe = row.userId === userId;
           return (
             <article key={row.userId} className={`card flex items-center justify-between p-3 ${isMe ? 'border-brand bg-brand/10' : ''}`}>
@@ -118,6 +124,21 @@ export default async function LeaderboardsPage({
             </article>
           );
         })}
+        {!isMeInTopRows && meRow && (
+          <>
+            <p className="px-2 text-center text-xs font-bold uppercase tracking-[0.2em] text-zinc-400">…</p>
+            <article className="card flex items-center justify-between border-brand bg-brand/10 p-3">
+              <div className="flex items-center gap-3">
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-brand text-sm font-black text-black">#{meRow.rank}</span>
+                <div>
+                  <p className="font-black">{meRow.displayName} (Moi)</p>
+                  <p className="text-xs text-zinc-300">{meRow.countryName} • {meRow.totalPredictions} pronos</p>
+                </div>
+              </div>
+              <p className="text-lg font-black text-brand">{meRow.points} pts</p>
+            </article>
+          </>
+        )}
       </section>
 
       <PlayerNav />

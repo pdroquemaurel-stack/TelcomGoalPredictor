@@ -52,7 +52,7 @@ export function ChallengeFixturesClient({ fixtures }: { fixtures: ChallengeFixtu
       </section>
 
       {groupedFixtures.length === 0 && (
-        <p className="mt-3 text-sm text-zinc-300">{tab === 'upcoming' ? 'Aucun match à venir dans ce challenge.' : 'Aucun match passé pronostiqué dans ce challenge.'}</p>
+        <p className="mt-3 rounded-2xl border border-white/10 bg-zinc-900/70 px-3 py-3 text-sm text-zinc-300">{tab === 'upcoming' ? 'Aucun match à venir dans ce challenge pour le moment.' : 'Aucun match passé pronostiqué dans ce challenge.'}</p>
       )}
 
       {groupedFixtures.map((group) => (

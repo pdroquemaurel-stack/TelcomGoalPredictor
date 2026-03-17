@@ -79,9 +79,10 @@ test('daily page redirects to unified predictions page', async () => {
   assert.match(dailyPage, /redirect\('\/predictions'\)/);
 });
 
-test('bottom navigation points Pronos du jour to predictions page', async () => {
+test('bottom navigation uses product wording and points Predictions to predictions page', async () => {
   const nav = await fs.readFile('src/components/player-nav.tsx', 'utf8');
-  assert.match(nav, /\['\/predictions', 'Pronos du jour'\]/);
+  assert.match(nav, /\['\/predictions', 'Predictions'\]/);
+  assert.match(nav, /\['\/leaderboards', 'Leaderboard'\]/);
 });
 
 test('predictions and challenge pages use shared fixture filters with expected sorting direction', async () => {
@@ -93,7 +94,8 @@ test('predictions and challenge pages use shared fixture filters with expected s
   assert.match(challengeClient, /filter\(\(fixture\) => isUpcomingFixture\(fixture\)\)/);
   assert.match(challengeClient, /filter\(\(fixture\) => isPastFixture\(fixture\)\)/);
 
-  assert.match(predictionsClient, /sort\(\(a, b\) => \+new Date\(a\.kickoff\) - \+new Date\(b\.kickoff\)\)/);
+  assert.match(predictionsClient, /const aLocked = a\.state === 'locked' \? 0 : 1/);
+  assert.match(predictionsClient, /return \+new Date\(a\.kickoff\) - \+new Date\(b\.kickoff\)/);
   assert.match(predictionsClient, /sort\(\(a, b\) => \+new Date\(b\.kickoff\) - \+new Date\(a\.kickoff\)\)/);
   assert.match(challengeClient, /sort\(\(a, b\) => \+new Date\(a\.kickoff\) - \+new Date\(b\.kickoff\)\)/);
   assert.match(challengeClient, /sort\(\(a, b\) => \+new Date\(b\.kickoff\) - \+new Date\(a\.kickoff\)\)/);
