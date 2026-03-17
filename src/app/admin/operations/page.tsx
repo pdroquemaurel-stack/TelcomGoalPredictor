@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import type { AdminSyncResult } from '@/lib/admin-sync-contract';
 
 type Summary = {
   competitions: number;
@@ -48,8 +49,8 @@ export default function AdminOperationsPage() {
     setLoadingSync(true);
     setResult('');
     const res = await fetch('/api/admin/sync', { method: 'POST' });
-    const body = await res.json();
-    if (res.ok) {
+    const body = await res.json() as { data?: AdminSyncResult; error?: { message?: string; details?: string } };
+    if (res.ok && body.data) {
       const warningSuffix = body.data.errors?.length
         ? ` • ⚠️ anomalies: ${body.data.errors.length}`
         : '';
@@ -73,8 +74,8 @@ export default function AdminOperationsPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ confirmation: confirmText }),
     });
-    const body = await res.json();
-    if (res.ok) {
+    const body = await res.json() as { data?: { predictionsDeleted: number; challengeFixturesDeleted: number; fixturesDeleted: number; competitionsDeleted: number; teamsDeleted: number }; error?: { message?: string } };
+    if (res.ok && body.data) {
       setResult(`✅ Purge OK • predictions:${body.data.predictionsDeleted}, challengeFixtures:${body.data.challengeFixturesDeleted}, fixtures:${body.data.fixturesDeleted}, competitions:${body.data.competitionsDeleted}, teams:${body.data.teamsDeleted}`);
       setConfirmText('');
       await loadSummary();

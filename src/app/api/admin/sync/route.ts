@@ -6,6 +6,7 @@ import { apiError, apiSuccess } from '@/lib/api';
 import { buildAdminSyncWindow } from '@/lib/admin-sync-window';
 import { prisma } from '@/lib/prisma';
 import { type AdminSyncStep, formatAdminSyncError, validateAdminSyncConfig } from '@/lib/admin-sync-diagnostics';
+import type { AdminSyncResult } from '@/lib/admin-sync-contract';
 
 export async function POST() {
   let currentStep: AdminSyncStep = 'auth';
@@ -37,7 +38,7 @@ export async function POST() {
     currentStep = 'settleFinishedFixtures';
     const settlement = await settleFinishedFixtures();
 
-    const syncResult = {
+    const syncResult: AdminSyncResult = {
       success: true,
       from,
       to,

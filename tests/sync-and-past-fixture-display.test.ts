@@ -33,6 +33,14 @@ test('mapFixtureState marks fixture as FINISHED when final score is available', 
   assert.equal(state.predictionEnabled, false);
 });
 
+
+test('mapFixtureState keeps settled-like statuses as finished and predictions closed', () => {
+  const state = mapFixtureState('SETTLED', 1, 0);
+
+  assert.equal(state.fixtureState, FixtureState.FINISHED);
+  assert.equal(state.predictionEnabled, false);
+});
+
 test('past fixtures hide odds, upcoming fixtures keep odds', () => {
   assert.equal(shouldShowFixtureOdds(true), false);
   assert.equal(shouldShowFixtureOdds(false), true);
