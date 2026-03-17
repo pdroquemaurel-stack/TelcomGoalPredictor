@@ -16,7 +16,7 @@ export type StoredPrediction = ScorePrediction & {
   userId: string;
 };
 
-export function filterOutCurrentUserPredictions(predictions: StoredPrediction[], currentUserId: string) {
+export function filterOutCurrentUserPredictions<T extends { userId: string }>(predictions: T[], currentUserId: string): T[] {
   return predictions.filter((prediction) => prediction.userId !== currentUserId);
 }
 
