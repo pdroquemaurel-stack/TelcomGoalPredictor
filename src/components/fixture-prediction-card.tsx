@@ -20,7 +20,7 @@ type FixturePredictionCardProps = {
   editable: boolean;
   finalScore?: { homeScore: number; awayScore: number } | null;
   points?: number;
-  odds: { homeWin: number; draw: number; awayWin: number };
+  odds?: { homeWin: number; draw: number; awayWin: number };
   isLocked?: boolean;
   onSaved?: (prediction: { homeScore: number; awayScore: number }) => void;
 };
@@ -64,7 +64,7 @@ function LockBadge({ className }: { className: string }) {
 }
 
 export function FixturePredictionCard(props: FixturePredictionCardProps) {
-  const { fixtureId, kickoff, competition, home, homeLogoUrl, away, awayLogoUrl, editable, onSaved, finalScore, points, odds, isLocked = false } = props;
+  const { fixtureId, kickoff, competition, home, homeLogoUrl, away, awayLogoUrl, editable, onSaved, finalScore, points, odds = { homeWin: 3, draw: 3, awayWin: 3 }, isLocked = false } = props;
   const [prediction, setPrediction] = useState<Prediction>(props.savedPrediction);
   const [homeScore, setHomeScore] = useState(props.savedPrediction ? String(props.savedPrediction.homeScore) : '');
   const [awayScore, setAwayScore] = useState(props.savedPrediction ? String(props.savedPrediction.awayScore) : '');
