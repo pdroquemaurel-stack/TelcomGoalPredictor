@@ -227,6 +227,8 @@ test('settlement + resettlement remain idempotent and rescore correctly after sc
   assert.equal(prisma.__getFixture('f1').fixtureState, FixtureState.SETTLED);
   assert.equal(prisma.__getFixture('f1').statusText, 'SETTLED');
   assert.equal(prisma.__getProfile('u1').totalPoints, 3);
+  assert.equal(prisma.__getProfile('u1').exactHits, 1);
+  assert.equal(prisma.__getProfile('u1').accuracyPct, 100);
 
   const secondSettlement = await settleFinishedFixtures(prisma);
   assert.equal(secondSettlement.settledFixturesCount, 0);
@@ -248,6 +250,8 @@ test('settlement + resettlement remain idempotent and rescore correctly after sc
   assert.equal(correctionSettlement.updatedPredictionsCount, 1);
   assert.equal(prisma.__getPrediction('p1').pointsAwarded, 1);
   assert.equal(prisma.__getProfile('u1').totalPoints, 1);
+  assert.equal(prisma.__getProfile('u1').exactHits, 0);
+  assert.equal(prisma.__getProfile('u1').accuracyPct, 0);
   assert.equal(prisma.__getFixture('f1').fixtureState, FixtureState.SETTLED);
 
   prisma.__seedFixture({
@@ -263,6 +267,8 @@ test('settlement + resettlement remain idempotent and rescore correctly after sc
   assert.equal(reverseCorrectionSettlement.updatedPredictionsCount, 1);
   assert.equal(prisma.__getPrediction('p1').pointsAwarded, 3);
   assert.equal(prisma.__getProfile('u1').totalPoints, 3);
+  assert.equal(prisma.__getProfile('u1').exactHits, 1);
+  assert.equal(prisma.__getProfile('u1').accuracyPct, 100);
 
   const leaderboardRows = prisma.__getLeaderboardRows().filter((row: any) => row.scope === LeaderboardScope.AFRICA && row.period === LeaderboardPeriod.ALL_TIME);
   assert.equal(leaderboardRows.length, 1);

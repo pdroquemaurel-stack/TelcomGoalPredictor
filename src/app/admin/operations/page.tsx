@@ -1,44 +1,29 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { AdminSyncResult } from '@/lib/admin-sync-contract';
+import { adminSyncResultSchema, operationsSummarySchema, type OperationsSummary } from '@/lib/admin-sync-contract';
 
-type Summary = {
-  competitions: number;
-  fixtures: number;
-  visibleFixtures: number;
-  liveFixtures: number;
-  finishedFixtures: number;
-  finishedWithoutScore: number;
-  unsettledFinished: number;
-  users: number;
-  predictions: number;
-  badges: number;
-  dailyCompetitions: number;
-  activeChallenges: number;
-  lastSyncAt: string | null;
-  problematicFixtures: Array<{
-    id: string;
-    match: string;
-    competition: string;
-    state: string;
-    visible: boolean;
-    predictionEnabled: boolean;
-    hasScore: boolean;
-  }>;
-};
+type ApiFailure = { error?: { message?: string; details?: string } };
 
 export default function AdminOperationsPage() {
   const [loadingSync, setLoadingSync] = useState(false);
   const [loadingPurge, setLoadingPurge] = useState(false);
   const [result, setResult] = useState<string>('');
   const [confirmText, setConfirmText] = useState('');
-  const [summary, setSummary] = useState<Summary | null>(null);
+  const [summary, setSummary] = useState<OperationsSummary | null>(null);
 
   const loadSummary = async () => {
     const response = await fetch('/api/admin/operations/summary', { cache: 'no-store' });
-    const body = await response.json();
-    if (response.ok) setSummary(body.data);
+    const body = await response.json() as { data?: unknown };
+    if (response.ok && body.data) {
+      const parsed = operationsSummarySchema.safeParse(body.data);
+      if (parsed.success) {
+        setSummary(parsed.data);
+        return;
+      }
+
+      setResult('❌ Résumé opérations invalide (contrat runtime).');
+    }
   };
 
   useEffect(() => {
@@ -49,12 +34,19 @@ export default function AdminOperationsPage() {
     setLoadingSync(true);
     setResult('');
     const res = await fetch('/api/admin/sync', { method: 'POST' });
-    const body = await res.json() as { data?: AdminSyncResult; error?: { message?: string; details?: string } };
+    const body = await res.json() as { data?: unknown } & ApiFailure;
     if (res.ok && body.data) {
-      const warningSuffix = body.data.errors?.length
-        ? ` • ⚠️ anomalies: ${body.data.errors.length}`
+      const parsed = adminSyncResultSchema.safeParse(body.data);
+      if (!parsed.success) {
+        setResult('❌ Réponse de sync invalide (contrat runtime).');
+        setLoadingSync(false);
+        return;
+      }
+
+      const warningSuffix = parsed.data.errors?.length
+        ? ` • ⚠️ anomalies: ${parsed.data.errors.length}`
         : '';
-      setResult(`✅ Sync ok • compétitions: ${body.data.competitionsSynced}, matchs créés: ${body.data.fixturesCreated}, matchs mis à jour: ${body.data.fixturesUpdated}, matchs ignorés: ${body.data.fixturesSkipped}, settled: ${body.data.settlement.settledFixturesCount}, resettled: ${body.data.settlement.resettledFixturesCount}${warningSuffix}`);
+      setResult(`✅ Sync ok • compétitions: ${parsed.data.competitionsSynced}, matchs créés: ${parsed.data.fixturesCreated}, matchs mis à jour: ${parsed.data.fixturesUpdated}, matchs ignorés: ${parsed.data.fixturesSkipped}, settled: ${parsed.data.settlement.settledFixturesCount}, resettled: ${parsed.data.settlement.resettledFixturesCount}${warningSuffix}`);
       await loadSummary();
     } else {
       const message = body?.error?.message ?? 'Erreur inconnue';

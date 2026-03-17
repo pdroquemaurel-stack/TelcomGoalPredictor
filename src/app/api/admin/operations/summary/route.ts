@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { apiError, apiSuccess } from '@/lib/api';
 import { prisma } from '@/lib/prisma';
+import { operationsSummarySchema } from '@/lib/admin-sync-contract';
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -52,7 +53,7 @@ export async function GET() {
     prisma.auditLog.findFirst({ where: { action: 'ADMIN_SYNC_SUCCESS' }, orderBy: { createdAt: 'desc' } }),
   ]);
 
-  return apiSuccess({
+  const summary = {
     competitions,
     fixtures,
     visibleFixtures,
@@ -65,7 +66,7 @@ export async function GET() {
     badges,
     dailyCompetitions,
     activeChallenges,
-    lastSyncAt: lastSync?.createdAt ?? null,
+    lastSyncAt: lastSync?.createdAt?.toISOString() ?? null,
     problematicFixtures: problematicFixtures.map((fixture) => ({
       id: fixture.id,
       match: `${fixture.homeTeam.name} vs ${fixture.awayTeam.name}`,
@@ -75,5 +76,10 @@ export async function GET() {
       predictionEnabled: fixture.predictionEnabled,
       hasScore: fixture.homeScore !== null && fixture.awayScore !== null,
     })),
-  });
+  };
+
+  operationsSummarySchema.parse(summary);
+
+  return apiSuccess(summary);
 }
+
