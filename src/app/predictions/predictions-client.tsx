@@ -96,10 +96,21 @@ export function PredictionsClient() {
 
       {tab === 'upcoming' && (
         <section className="card grid grid-cols-3 gap-2 text-center text-xs font-bold">
-          <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 px-2 py-2 text-emerald-200">Pronostiquable<br />{availablePredictionsCount}</div>
-          <div className="rounded-2xl border border-sky-500/40 bg-sky-500/10 px-2 py-2 text-sky-200">Déjà pronostiqué<br />{savedUpcomingPredictionsCount}</div>
-          <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 px-2 py-2 text-amber-200">Verrouillé<br />{lockedUpcomingPredictionsCount}</div>
-        </section>
+            <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 px-2 py-2 text-emerald-200">
+              <div className="text-2xl font-extrabold leading-none">{availablePredictionsCount}</div>
+              <div className="text-[10px] opacity-80">Pronostiquable</div>
+            </div>
+          
+            <div className="rounded-2xl border border-sky-500/40 bg-sky-500/10 px-2 py-2 text-sky-200">
+              <div className="text-2xl font-extrabold leading-none">{savedUpcomingPredictionsCount}</div>
+              <div className="text-[10px] opacity-80">Déjà pronostiqué</div>
+            </div>
+          
+            <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 px-2 py-2 text-amber-200">
+              <div className="text-2xl font-extrabold leading-none">{lockedUpcomingPredictionsCount}</div>
+              <div className="text-[10px] opacity-80">Verrouillé</div>
+            </div>
+          </section>
       )}
 
       {message && <p className="rounded-2xl border border-rose-400/40 bg-rose-500/10 px-4 py-3 text-sm font-semibold text-rose-200">{message}</p>}
